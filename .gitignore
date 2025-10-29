@@ -8,51 +8,17 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-.DS_Store
 dist
 dist-ssr
-coverage
 *.local
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
+.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-
-*.tsbuildinfo
-
-.eslintcache
-
-# Cypress
-/cypress/videos/
-/cypress/screenshots/
-
-# Vitest
-__screenshots__/
-
-# 日志文件
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# 环境变量文件（包含敏感信息）
-.env
-.env.local
-.env.*.local
-
-# 包管理器相关
-pnpm-lock.yaml
-yarn.lock
-
-# 操作系统临时文件
-Thumbs.db
-
-# 测试相关（根据您的测试配置补充）
-/vitest-report/
