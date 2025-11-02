@@ -4,7 +4,7 @@
       <div class="login-header">
         <h2>管理员登录</h2>
       </div>
-      
+
       <form class="login-form" @submit.prevent="handleLogin">
         <div class="form-group">
           <label for="password">密码</label>
@@ -28,7 +28,7 @@
             {{ errors.password }}
           </div>
         </div>
-        
+
         <button
           type="submit"
           :disabled="loading"
@@ -38,7 +38,7 @@
           <span v-else>确认登录</span>
         </button>
       </form>
-      
+
       <div class="login-footer">
         <p>系统安全验证</p>
       </div>
@@ -49,9 +49,22 @@
 <script>
 import { ref, reactive } from 'vue'
 import axios from 'axios'
+import { useRouter } from 'vue-router'
+
+// 配置axios实例，与doctorApi.js保持一致
+const api = axios.create({
+  baseURL: 'http://localhost:8080', // 后端服务地址
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  // 允许携带凭证（cookies）
+  withCredentials: true
+})
 export default {
   name: 'LoginView',
   setup() {
+    const router = useRouter()
     const loading = ref(false)
     const showPassword = ref(false)
 
@@ -66,10 +79,10 @@ export default {
     //密码有效验证函数
     const validateForm = () => {
       let isValid = true
-      
+
       // 清空之前的错误
       errors.password = ''
-      
+
       if (!loginForm.password.trim()) {
         errors.password = '请输入密码'
         isValid = false
@@ -80,7 +93,7 @@ export default {
         errors.password = '密码长度不能超过20个字符'
         isValid = false
       }
-      
+
       return isValid
     }
     //更改密码可见性
@@ -91,17 +104,43 @@ export default {
     const handleLogin = async () => {
       if (!validateForm()) return
       loading.value = true
-      
+
       try {
-        const response = await axios.post('/api/login', {
+        // 调用后端API进行登录验证
+        // 使用配置好的api实例确保请求正确发送到后端
+        const response = await api.post('/admin/login', {
           password: loginForm.password
         });
-        //剩余的成功处理逻辑
-        alert('获取jwt成功')
-        //从response的data里面读取jwt并做本地存储
-        //跳转到home界面（要携带正确的jwt才能访问带动态信息的home，不然就是静态的home）
+
+        // 检查响应状态
+        if (response.data.code === 200) {
+          alert('登录成功')
+          // 从response.data.data中读取jwt（后端返回结构是{code:200, data:"jwt令牌", msg:"登录成功"}）
+          sessionStorage.setItem('token', response.data.data)
+          sessionStorage.setItem('isAuthenticated', 'true')
+          router.push('/home/dashboard')
+        } else {
+          throw new Error(response.data.msg || '登录失败')
+        }
+
+        // 以下是备用的模拟登录验证（当后端API不可用时可以取消注释使用）
+        /*
+        // 开发环境模拟登录验证
+        if (loginForm.password === 'admin123') {
+          alert('模拟登录成功')
+          // 登录成功后设置认证状态
+          sessionStorage.setItem('isAuthenticated', 'true')
+          // 模拟存储token
+          sessionStorage.setItem('token', 'mock-jwt-token')
+          // 跳转到后台首页
+          router.push('/home/dashboard')
+        } else {
+          throw new Error('密码错误')
+        }
+        */
+
       } catch (error) {
-        //错误处理逻辑
+        errors.password = error.message || '登录失败，请重试'
       } finally {
         loading.value = false
       }
@@ -277,7 +316,7 @@ export default {
     margin: 20px;
     padding: 30px 20px;
   }
-  
+
   .password-input {
     padding-right: 70px;
   }
