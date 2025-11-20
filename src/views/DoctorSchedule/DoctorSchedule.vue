@@ -98,40 +98,64 @@
 
       <!-- ==================== 新增排班标签页 ==================== -->
       <el-tab-pane label="新增排班" name="add">
-        <h2>新增医生排班</h2>
-        <el-form :model="addScheduleForm" ref="addFormRef" label-width="120px" style="max-width: 600px">
-          <el-form-item label="选择医生" prop="doctorId" required>
-            <el-select v-model="addScheduleForm.doctorId" placeholder="请选择医生" filterable>
-              <el-option
-                v-for="doc in doctorOptions"
-                :key="doc.userId"
-                :label="`${doc.userName} (${doc.doctorSpeciality})`"
-                :value="doc.userId">
-              </el-option>
-            </el-select>
+        <h2>批量新增排班</h2>
+        <el-form :model="addScheduleForm" ref="addFormRef" label-width="120px">
+          <el-form-item label="选择周次" prop="week" required>
+            <el-radio-group v-model="addScheduleForm.week">
+              <el-radio :value="0">当前周</el-radio>
+              <el-radio :value="1">下一周</el-radio>
+            </el-radio-group>
           </el-form-item>
-          <el-form-item label="排班日期" prop="scheduleDate" required>
-            <el-date-picker
-              v-model="addScheduleForm.scheduleDate"
-              type="date"
-              placeholder="选择日期"
-              value-format="YYYY-MM-DD"
-            />
-          </el-form-item>
-          <el-form-item label="时间段" prop="timeSlot" required>
-            <el-select v-model="addScheduleForm.timeSlot" placeholder="请选择时间段">
-              <el-option label="上午 (08:00-12:00)" value="AM"></el-option>
-              <el-option label="下午 (14:00-18:00)" value="PM"></el-option>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="放号数量" prop="totalQuota" required>
-            <el-input-number v-model="addScheduleForm.totalQuota" :min="1" />
-          </el-form-item>
-          <el-form-item label="诊室" prop="roomNumber" required>
-            <el-input v-model="addScheduleForm.roomNumber" placeholder="请输入诊室号，如 内科1诊室"></el-input>
-          </el-form-item>
-          <el-form-item>
-            <el-button type="primary" @click="handleAddSchedule" :loading="addLoading">立即创建</el-button>
+
+          <el-divider content-position="left">一周排班安排</el-divider>
+
+          <div class="week-schedule-container">
+            <el-card v-for="day in weekDaysList" :key="day.key" class="day-card" shadow="hover">
+              <template #header>
+                <div class="card-header">
+                  <span class="day-title">{{ day.label }}</span>
+                  <el-button type="primary" size="small" @click="addScheduleForDay(day.key)">
+                    + 添加排班
+                  </el-button>
+                </div>
+              </template>
+
+              <div v-if="addScheduleForm.schedules[day.key].length === 0" class="empty-hint">
+                暂无排班，点击上方按钮添加
+              </div>
+
+              <div v-else>
+                <div v-for="(schedule, index) in addScheduleForm.schedules[day.key]" :key="index" class="schedule-item">
+                  <el-row :gutter="10" align="middle">
+                    <el-col :span="10">
+                      <el-select v-model="schedule.doctor_name" placeholder="选择医生" filterable style="width: 100%">
+                        <el-option
+                          v-for="doc in doctorOptions"
+                          :key="doc.userId"
+                          :label="`${doc.userName} (${doc.doctorSpeciality})`"
+                          :value="doc.userName">
+                        </el-option>
+                      </el-select>
+                    </el-col>
+                    <el-col :span="10">
+                      <el-select v-model="schedule.template_id" placeholder="选择时间段" style="width: 100%">
+                        <el-option label="上午" value="TIME0001"></el-option>
+                        <el-option label="下午" value="TIME0002"></el-option>
+                      </el-select>
+                    </el-col>
+                    <el-col :span="4">
+                      <el-button type="danger" size="small" @click="removeScheduleForDay(day.key, index)" style="width: 100%">
+                        删除
+                      </el-button>
+                    </el-col>
+                  </el-row>
+                </div>
+              </div>
+            </el-card>
+          </div>
+
+          <el-form-item style="margin-top: 20px;">
+            <el-button type="primary" @click="handleAddSchedule" :loading="addLoading">提交排班</el-button>
             <el-button @click="resetAddForm">重置表单</el-button>
           </el-form-item>
         </el-form>
@@ -239,7 +263,7 @@ import { ref, reactive, onMounted, computed,watch } from 'vue'
 import { ElMessage,ElMessageBox } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 // 导入你的 API 函数
-import { getSchedulesHistory, getSchedules } from './api/scheduleApi.js'
+import { getSchedulesHistory, getSchedules, createNextWeekSchedule } from './api/scheduleApi.js'
 // import { getDoctorSchedule, addSchedule } from './api/scheduleApi.js'
 // import { getDepartmentOptions } from '@/views/DoctorQuery/api/doctorApi.js'
 // import { getDoctorListWithFilter } from '@/views/DoctorQuery/api/doctorApi.js'
@@ -304,12 +328,28 @@ const scheduleData = ref([{ timeSlot: '上午' }, { timeSlot: '下午' }])
 // --- 新增功能状态 ---
 const addFormRef = ref<FormInstance>()
 const addScheduleForm = reactive({
-  doctorId: '',
-  scheduleDate: '',
-  timeSlot: '',
-  totalQuota: 20,
-  roomNumber: ''
+  week: 1, // 0=当前周，1=下一周
+  schedules: {
+    mon: [] as Array<{doctor_name: string, template_id: string}>,
+    tue: [] as Array<{doctor_name: string, template_id: string}>,
+    wed: [] as Array<{doctor_name: string, template_id: string}>,
+    thu: [] as Array<{doctor_name: string, template_id: string}>,
+    fri: [] as Array<{doctor_name: string, template_id: string}>,
+    sat: [] as Array<{doctor_name: string, template_id: string}>,
+    sun: [] as Array<{doctor_name: string, template_id: string}>
+  }
 })
+
+// 一周天数列表
+const weekDaysList = [
+  { key: 'mon', label: '周一' },
+  { key: 'tue', label: '周二' },
+  { key: 'wed', label: '周三' },
+  { key: 'thu', label: '周四' },
+  { key: 'fri', label: '周五' },
+  { key: 'sat', label: '周六' },
+  { key: 'sun', label: '周日' }
+]
 
 // --- 计算属性 ---
 const weekDays = computed(() => {
@@ -603,32 +643,67 @@ const getScheduleByTimeAndDay = (timeSlot: string, dayIndex: number) => {
   return scheduleDetails.value.filter(s => s.timeSlot === timeSlot && s.dayIndex === dayIndex)
 }
 
-const handleAddSchedule = async () => {
-  if (!addFormRef.value) return
-  await addFormRef.value.validate(async (valid) => {
-    if (valid) {
-      addLoading.value = true
-      try {
-        console.log('提交的新增排班数据:', addScheduleForm)
-        // await addSchedule(addScheduleForm)
-        ElMessage.success('新增排班成功！')
-        resetAddForm()
-        activeTab.value = 'query'
-      } catch (error) {
-        console.error('新增排班失败', error)
-        ElMessage.error('新增排班失败')
-      } finally {
-        addLoading.value = false
-      }
-    } else {
-      ElMessage.error('请检查表单是否填写完整')
-    }
+// 为指定日期添加排班
+const addScheduleForDay = (dayKey: 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun') => {
+  addScheduleForm.schedules[dayKey].push({
+    doctor_name: '',
+    template_id: 'TIME0001'
   })
 }
 
+// 删除指定日期的排班
+const removeScheduleForDay = (dayKey: 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun', index: number) => {
+  addScheduleForm.schedules[dayKey].splice(index, 1)
+}
+
+const handleAddSchedule = async () => {
+  // 验证是否至少有一天有排班
+  const hasSchedule = Object.values(addScheduleForm.schedules).some(daySchedules => daySchedules.length > 0)
+  if (!hasSchedule) {
+    ElMessage.warning('请至少为一天添加排班')
+    return
+  }
+
+  // 验证所有排班是否都填写完整
+  let isValid = true
+  for (const [day, schedules] of Object.entries(addScheduleForm.schedules)) {
+    for (const schedule of schedules) {
+      if (!schedule.doctor_name || !schedule.template_id) {
+        ElMessage.error(`请完整填写 ${weekDaysList.find(d => d.key === day)?.label} 的排班信息`)
+        isValid = false
+        return
+      }
+    }
+  }
+
+  if (!isValid) return
+
+  addLoading.value = true
+  try {
+    console.log('提交的新增排班数据:', addScheduleForm)
+    await createNextWeekSchedule(addScheduleForm.schedules, addScheduleForm.week)
+    ElMessage.success('新增排班成功！')
+    resetAddForm()
+    activeTab.value = 'query'
+  } catch (error) {
+    console.error('新增排班失败', error)
+    ElMessage.error('新增排班失败')
+  } finally {
+    addLoading.value = false
+  }
+}
+
 const resetAddForm = () => {
-  if (!addFormRef.value) return
-  addFormRef.value.resetFields()
+  addScheduleForm.week = 1
+  addScheduleForm.schedules = {
+    mon: [],
+    tue: [],
+    wed: [],
+    thu: [],
+    fri: [],
+    sat: [],
+    sun: []
+  }
 }
 // --- 调班申请相关方法 ---
 const onSourceDoctorChange = async (doctorId: string) => {
@@ -840,5 +915,44 @@ const getMockAdjustmentRequests = (): AdjustmentRequest[] => {
 .schedule-actions .el-button {
   width: 100%;
   margin: 0;
+}
+
+/* 批量新增排班样式 */
+.week-schedule-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.day-card {
+  min-height: 150px;
+}
+
+.day-card .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.day-title {
+  font-weight: bold;
+  font-size: 16px;
+  color: #303133;
+}
+
+.empty-hint {
+  color: #909399;
+  text-align: center;
+  padding: 30px 0;
+  font-size: 14px;
+}
+
+.schedule-item {
+  margin-bottom: 12px;
+}
+
+.schedule-item:last-child {
+  margin-bottom: 0;
 }
 </style>

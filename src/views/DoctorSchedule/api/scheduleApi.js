@@ -82,3 +82,25 @@ export const getSchedulesHistory = (params) => {
 export const getSchedules = (params) => {
   return api.get('/admin/getSchedules', params)
 }
+
+/**
+ * @description 创建下周排班
+ * @param {Object} scheduleData - 排班数据
+ * @param {Array} scheduleData.mon - 周一排班列表
+ * @param {Array} scheduleData.tue - 周二排班列表
+ * @param {Array} scheduleData.wed - 周三排班列表
+ * @param {Array} scheduleData.thu - 周四排班列表
+ * @param {Array} scheduleData.fri - 周五排班列表
+ * @param {Array} scheduleData.sat - 周六排班列表
+ * @param {Array} scheduleData.sun - 周日排班列表
+ * @param {number} week - 周次标识：0=当前周，1=下一周
+ * @returns {Promise<void>}
+ */
+export const createNextWeekSchedule = (scheduleData, week) => {
+  return api({
+    url: '/admin/CreateNextWeekSchedule',
+    method: 'post',
+    data: scheduleData,
+    params: { week }
+  })
+}
