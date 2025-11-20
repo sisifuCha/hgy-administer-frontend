@@ -835,11 +835,10 @@ const getMockAdjustmentRequests = (): AdjustmentRequest[] => {
 .schedule-actions {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
   gap: 8px;
 }
 .schedule-actions .el-button {
+  width: 100%;
   margin: 0;
-  justify-content: center;
 }
 </style>
