@@ -108,19 +108,20 @@ export default {
       try {
         // 调用后端API进行登录验证
         // 使用配置好的api实例确保请求正确发送到后端
-        const response = await api.post('/admin/login', {
+        const token = await api.post('/admin/login', {
           password: loginForm.password
         });
 
-        // 检查响应状态
-        if (response.data.code === 200) {
-          alert('登录成功')
-          // 从response.data.data中读取jwt（后端返回结构是{code:200, data:"jwt令牌", msg:"登录成功"}）
-          sessionStorage.setItem('token', response.data.data)
-          sessionStorage.setItem('isAuthenticated', 'true')
-          router.push('/home/dashboard')
+        if (token) {
+          alert('登录成功');
+          localStorage.setItem('token', token); // 直接存入拿到的 token
+          localStorage.setItem('isAuthenticated', 'true');
+          console.log('准备跳转，router 实例是:', router);
+          router.push('/home/dashboard');
         } else {
-          throw new Error(response.data.msg || '登录失败')
+          console.error("登录组件捕获到错误:", error);
+          // 这种情况很少发生，除非后端成功但返回了空的 data
+          throw new Error('登录失败，未能获取到凭证');
         }
 
         // 以下是备用的模拟登录验证（当后端API不可用时可以取消注释使用）

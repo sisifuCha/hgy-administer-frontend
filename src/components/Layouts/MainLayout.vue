@@ -25,13 +25,33 @@
             <el-icon><User /></el-icon>
             <span>用户管理</span>
           </el-menu-item>
+
+        </el-sub-menu>
+        <el-sub-menu index="2">
+          <template #title>
+            <el-icon><Menu /></el-icon>
+            <span>医生管理</span>
+          </template>
           <el-menu-item index="/home/doctorQuery">
             <el-icon><User /></el-icon>
-            <span>医生查询</span>
+            <span>医生信息管理</span>
+          </el-menu-item>
+          <el-menu-item index="/home/doctorSchedule">
+            <el-icon><User /></el-icon>
+            <span>医生排班管理</span>
           </el-menu-item>
         </el-sub-menu>
-
-        <el-sub-menu index="2">
+        <el-sub-menu index="3">
+          <template #title>
+            <el-icon><User /></el-icon>
+            <span>患者管理</span>
+          </template>
+          <el-menu-item index="/home/patientManagement">
+            <el-icon><User /></el-icon>
+            <span>患者信息管理</span>
+          </el-menu-item>
+        </el-sub-menu>
+        <el-sub-menu index="4">
           <template #title>
             <el-icon><Setting /></el-icon>
             <span>配置中心</span>

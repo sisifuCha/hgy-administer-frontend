@@ -6,7 +6,7 @@ const router = useRouter()
 
 onMounted(() => {
   // 检查是否已登录，如果已登录则直接跳转到dashboard
-  const isAuthenticated = sessionStorage.getItem('isAuthenticated') === 'true'
+  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
   if (isAuthenticated && router.currentRoute.value.path === '/') {
     router.push('/home/dashboard')
   }

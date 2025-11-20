@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Login from '../views/LoginView.vue'
 import MainLayout from '../components/Layouts/MainLayout.vue'
 import UserManagement from '../views/users/UserManagement.vue'
+import DoctorScheduleView from '@/views/DoctorSchedule/DoctorSchedule.vue'
 
 const routes = [
   {
@@ -48,6 +49,16 @@ const routes = [
       {        path: 'doctorQuery',
                name: 'DoctorQuery',
                component: () => import('@/views/DoctorQuery/DoctorQueryView.vue')
+      },
+      {
+        path: '/home/doctorSchedule',
+        name: 'DoctorSchedule',
+        component: () => import('@/views/DoctorSchedule/DoctorSchedule.vue')
+      },
+      {
+        path: '/home/patientManagement',
+        name: 'PatientManagement',
+        component: () => import('@/views/patientManagement/patientManagementView.vue')
       }
     ]
   }
@@ -61,7 +72,7 @@ const router = createRouter({
 // 路由守卫 - 检查登录状态
 router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth) {
-    const isAuthenticated = sessionStorage.getItem('isAuthenticated') === 'true'
+    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
     if (!isAuthenticated) {
       next('/login')
     } else {

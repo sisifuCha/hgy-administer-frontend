@@ -20,7 +20,7 @@
               <span>系统主页</span>
             </div>
           </template>
-          
+
           <div class="welcome-content">
             <el-icon color="#67C23A" :size="64"><SuccessFilled /></el-icon>
             <h2>登录成功！</h2>
@@ -87,7 +87,7 @@ export default {
         type: 'warning'
       }).then(() => {
         // 清除登录状态
-        sessionStorage.removeItem('isAuthenticated')
+        localStorage.removeItem('isAuthenticated')
         ElMessage.success('退出成功！')
         // 跳转到登录页
         this.$router.push('/login')
