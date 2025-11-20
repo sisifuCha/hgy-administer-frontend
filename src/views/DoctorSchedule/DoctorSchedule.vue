@@ -76,10 +76,10 @@
                     </template>
                     <template #default>
                       <div class="schedule-actions">
-                        <el-button type="primary" size="small" @click="handleAdjustSchedule(schedule)" style="width: 100%; margin-bottom: 8px;">
+                        <el-button type="primary" size="small" @click="handleAdjustSchedule(schedule)">
                           调班
                         </el-button>
-                        <el-button type="danger" size="small" @click="handleDeleteSchedule(schedule)" style="width: 100%;">
+                        <el-button type="danger" size="small" @click="handleDeleteSchedule(schedule)">
                           删除排班
                         </el-button>
                       </div>
@@ -835,5 +835,11 @@ const getMockAdjustmentRequests = (): AdjustmentRequest[] => {
 .schedule-actions {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.schedule-actions .el-button {
+  margin: 0;
+  justify-content: center;
 }
 </style>
