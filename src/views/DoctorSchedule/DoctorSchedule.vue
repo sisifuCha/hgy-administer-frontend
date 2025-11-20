@@ -223,6 +223,7 @@ import { ref, reactive, onMounted, computed,watch } from 'vue'
 import { ElMessage,ElMessageBox } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 // 导入你的 API 函数
+import { getSchedulesHistory } from './api/scheduleApi.js'
 // import { getDoctorSchedule, addSchedule } from './api/scheduleApi.js'
 // import { getDepartmentOptions } from '@/views/DoctorQuery/api/doctorApi.js'
 // import { getDoctorListWithFilter } from '@/views/DoctorQuery/api/doctorApi.js'
@@ -390,40 +391,57 @@ const fetchInitialData = async () => {
 }
 
 const handleQuery = async () => {
-  if (!queryForm.week || !queryForm.departmentId) {
-    ElMessage.warning('请选科室')
+  if (!queryForm.departmentId) {
+    ElMessage.warning('请选择科室')
     return
   }
-  loading.value = true
   if (!queryForm.week && !queryForm.selectedDate) {
     ElMessage.warning('请选择周次或指定日期')
     return
   }
+
+  loading.value = true
   try {
+    // 根据选中的科室ID找到对应的科室名称
+    const selectedDept = departments.value.find(dept => dept.id === queryForm.departmentId)
+    if (!selectedDept) {
+      ElMessage.error('未找到选中的科室信息')
+      return
+    }
+
     let response
-    // 情况1：用户选择了指定日期 - 调用新接口
+    // 情况1：用户选择了指定日期 - 调用新接口 GetSchedulesHistory
     if (queryForm.selectedDate) {
       const params = {
-        departmentId: queryForm.departmentId,
-        targetDate: queryForm.selectedDate  // 格式：'2025-11-20'
+        date: queryForm.selectedDate,  // 格式：'2025-11-20'
+        depart_name: selectedDept.name  // 使用科室名称
       }
-      console.log('调用新接口 - 根据日期查询:', params)
-      // response = await getDoctorScheduleByDate(params)  // 新接口
+      console.log('调用历史排班接口 - 根据日期查询:', params)
+      response = await getSchedulesHistory(params)
     }
     // 情况2：用户选择了周次（当前周/下一周）- 调用原接口
     else if (queryForm.week) {
-      const params = {
-        week: queryForm.week,  // 'current' 或 'next'
-        departmentId: queryForm.departmentId
+      // 计算该周的某个日期（比如周一）
+      let targetDate = new Date()
+      if (queryForm.week === 'next') {
+        targetDate.setDate(targetDate.getDate() + 7)
       }
-      console.log('调用原接口 - 根据周次查询:', params)
-      // response = await getDoctorSchedule(params)  // 原接口
+      // 计算周一的日期
+      const currentDay = targetDate.getDay() || 7
+      const mondayDate = new Date(targetDate)
+      mondayDate.setDate(targetDate.getDate() - (currentDay - 1))
+      const dateStr = mondayDate.toISOString().split('T')[0]
+
+      const params = {
+        date: dateStr,
+        depart_name: selectedDept.name  // 使用科室名称
+      }
+      console.log('调用历史排班接口 - 根据周次查询:', params)
+      response = await getSchedulesHistory(params)
     }
 
-    // 临时使用模拟数据（实际开发时删除这行，使用上面的 response）
-    scheduleDetails.value = getMockScheduleData(queryForm.departmentId)
-    // scheduleDetails.value = response.data || []  // 实际使用这行
-
+    // 处理响应数据
+    scheduleDetails.value = response || []
     showScheduleTable.value = true
   } catch (error) {
     console.error('获取排班数据失败', error)

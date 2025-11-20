@@ -60,3 +60,14 @@ export const approveAdjustment = (requestId) => {
 export const rejectAdjustment = (requestId) => {
   return api.post(`/admin/schedules/adjustments/${requestId}/reject`)
 }
+
+/**
+ * @description 获取指定科室的历史排班
+ * @param {Object} params - 查询参数
+ * @param {string} params.date - 日期（YYYY-MM-DD格式）
+ * @param {string} params.depart_name - 科室名称
+ * @returns {Promise<Object>} 历史排班数据
+ */
+export const getSchedulesHistory = (params) => {
+  return api.get('/admin/GetSchedulesHistory', { params })
+}
