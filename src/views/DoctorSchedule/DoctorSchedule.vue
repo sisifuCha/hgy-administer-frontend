@@ -678,14 +678,34 @@ const handleAddSchedule = async () => {
 
   addLoading.value = true
   try {
-    console.log('提交的新增排班数据:', addScheduleForm)
+    console.log('=== 新增排班请求详情 ===')
+    console.log('1. 完整表单数据:', JSON.stringify(addScheduleForm, null, 2))
+    console.log('2. 请求体数据 (scheduleData):', JSON.stringify(addScheduleForm.schedules, null, 2))
+    console.log('3. URL参数 (week):', addScheduleForm.week)
+    console.log('4. 请求URL:', `/api/admin/CreateNextWeekSchedule?week=${addScheduleForm.week}`)
+    console.log('========================')
+
     await createNextWeekSchedule(addScheduleForm.schedules, addScheduleForm.week)
+
+    console.log('✅ 新增排班成功')
     ElMessage.success('新增排班成功！')
     resetAddForm()
     activeTab.value = 'query'
   } catch (error) {
-    console.error('新增排班失败', error)
-    ElMessage.error('新增排班失败')
+    console.error('❌ 新增排班失败详情:', {
+      message: error.message,
+      response: error.response,
+      config: error.config
+    })
+
+    // 更详细的错误提示
+    if (error.message && error.message.includes('timeout')) {
+      ElMessage.error('请求超时，可能是后端处理较慢，请联系后端开发人员检查')
+    } else if (error.response) {
+      ElMessage.error(`新增排班失败: ${error.response.data?.message || error.message}`)
+    } else {
+      ElMessage.error('新增排班失败，请检查网络连接')
+    }
   } finally {
     addLoading.value = false
   }

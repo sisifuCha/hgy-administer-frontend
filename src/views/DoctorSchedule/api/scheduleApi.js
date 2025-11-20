@@ -95,8 +95,19 @@ export const getSchedules = (params) => {
  * @param {Array} scheduleData.sun - 周日排班列表
  * @param {number} week - 周次标识：0=当前周，1=下一周
  * @returns {Promise<void>}
+ *
+ * 请求格式说明：
+ * - URL: POST /admin/CreateNextWeekSchedule?week=1
+ * - 请求体: { mon: [...], tue: [...], ... }
+ * - URL参数: week (从查询字符串获取)
  */
 export const createNextWeekSchedule = (scheduleData, week) => {
+  console.log('📤 API层 - createNextWeekSchedule 调用参数:', {
+    scheduleData,
+    week,
+    requestUrl: `/admin/CreateNextWeekSchedule?week=${week}`
+  })
+
   return api.post('/admin/CreateNextWeekSchedule', scheduleData, {
     params: { week }
   })
