@@ -76,7 +76,7 @@ export const getSchedulesHistory = (params) => {
  * @description 根据周次获取排班信息
  * @param {Object} params - 查询参数
  * @param {number} params.week - 周次标识：0=当前周，1=下一周
- * @param {string} params.depart_name - 科室名称
+ * @param {string} params.departName - 科室名称
  * @returns {Promise<Array>} 排班信息列表
  */
 export const getSchedules = (params) => {

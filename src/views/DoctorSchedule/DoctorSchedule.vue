@@ -452,7 +452,7 @@ const handleQueryByWeek = async () => {
 
     const params = {
       week: weekNumber,  // 0=当前周，1=下一周
-      depart_name: selectedDept.name  // 使用科室名称
+      departName: selectedDept.name  // 使用科室名称（注意：后端参数名是 departName）
     }
 
     console.log('==================== 周次查询调试信息 ====================')
@@ -462,7 +462,7 @@ const handleQueryByWeek = async () => {
     console.log('完整请求参数:', params)
     console.log('参数类型检查:', {
       week: typeof params.week,
-      depart_name: typeof params.depart_name
+      departName: typeof params.departName
     })
     console.log('========================================================')
 
