@@ -475,18 +475,44 @@ const handleQueryByWeek = async () => {
     console.log('response 的键:', response ? Object.keys(response) : 'null')
     console.log('========================================================')
 
-    // 处理响应数据 - 确保是数组格式
-    if (Array.isArray(response)) {
-      scheduleDetails.value = response
-    } else if (response && typeof response === 'object') {
-      // 如果返回的是对象，尝试提取数据数组
-      scheduleDetails.value = response.schedules || response.data || response.list || []
-      console.log('⚠️ 后端返回的不是数组，已尝试提取数据:', scheduleDetails.value)
-    } else {
-      scheduleDetails.value = []
-      console.warn('⚠️ 后端返回的数据格式不正确')
+    // 处理响应数据 - 将按星期分组的数据转换为数组格式
+    const convertedData: ScheduleDetail[] = []
+
+    if (response && typeof response === 'object') {
+      // 星期映射：mon=0, tue=1, wed=2, thu=3, fri=4, sat=5, sun=6
+      const dayMap: Record<string, number> = {
+        'mon': 0, 'tue': 1, 'wed': 2, 'thu': 3, 'fri': 4, 'sat': 5, 'sun': 6
+      }
+
+      // 时间段映射
+      const timeSlotMap: Record<string, string> = {
+        'TIME0001': '上午',
+        'TIME0002': '下午'
+      }
+
+      // 遍历每个星期的数据
+      Object.keys(response).forEach(dayKey => {
+        const dayIndex = dayMap[dayKey]
+        const schedules = response[dayKey]
+
+        if (Array.isArray(schedules)) {
+          schedules.forEach((schedule: any) => {
+            convertedData.push({
+              id: schedule.schedule_id || '',
+              timeSlot: timeSlotMap[schedule.schedule_time_id] || '未知',
+              dayIndex: dayIndex,
+              doctorName: schedule.doctor_name || `医生${schedule.doctor_id}`,  // 暂时使用 doctor_id
+              doctorTitle: schedule.doctor_title || '医师',  // 默认职称
+              roomNumber: schedule.room_number || '待定',  // 默认诊室
+              remainingQuota: schedule.available_slots || 0
+            })
+          })
+        }
+      })
     }
 
+    console.log('✅ 转换后的数据:', convertedData)
+    scheduleDetails.value = convertedData
     showScheduleTable.value = true
   } catch (error) {
     console.error('获取排班数据失败', error)
