@@ -58,17 +58,33 @@
             >
               <template #default="scope">
                 <div class="schedule-cell">
-                  <div
+                  <el-popover
                     v-for="schedule in getScheduleByTimeAndDay(scope.row.timeSlot, index)"
                     :key="schedule.id"
-                    class="doctor-schedule-card"
+                    placement="right"
+                    :width="200"
+                    trigger="click"
                   >
-                    <div class="doctor-name">{{ schedule.doctorName }} ({{ schedule.doctorTitle }})</div>
-                    <div class="schedule-info">
-                      <span class="room">{{ schedule.roomNumber }}</span>
-                      <span class="quota">余号: {{ schedule.remainingQuota }}</span>
-                    </div>
-                  </div>
+                    <template #reference>
+                      <div class="doctor-schedule-card clickable">
+                        <div class="doctor-name">{{ schedule.doctorName }} ({{ schedule.doctorTitle }})</div>
+                        <div class="schedule-info">
+                          <span class="room">{{ schedule.roomNumber }}</span>
+                          <span class="quota">余号: {{ schedule.remainingQuota }}</span>
+                        </div>
+                      </div>
+                    </template>
+                    <template #default>
+                      <div class="schedule-actions">
+                        <el-button type="primary" size="small" @click="handleAdjustSchedule(schedule)" style="width: 100%; margin-bottom: 8px;">
+                          调班
+                        </el-button>
+                        <el-button type="danger" size="small" @click="handleDeleteSchedule(schedule)" style="width: 100%;">
+                          删除排班
+                        </el-button>
+                      </div>
+                    </template>
+                  </el-popover>
                   <div v-if="getScheduleByTimeAndDay(scope.row.timeSlot, index).length === 0" class="no-schedule">
                     暂无排班
                   </div>
@@ -698,6 +714,35 @@ const handleReject = async (requestId: string) => {
   }
 }
 
+// --- 排班卡片操作方法 ---
+const handleAdjustSchedule = (schedule: ScheduleDetail) => {
+  console.log('🔄 调班操作 - 选中的排班信息:', {
+    排班ID: schedule.id,
+    医生姓名: schedule.doctorName,
+    医生职称: schedule.doctorTitle,
+    时间段: schedule.timeSlot,
+    星期索引: schedule.dayIndex,
+    诊室: schedule.roomNumber,
+    剩余号源: schedule.remainingQuota
+  })
+  ElMessage.info(`正在调班：${schedule.doctorName} - ${schedule.timeSlot}`)
+  // TODO: 后续可以在这里打开调班对话框或跳转到调班表单
+}
+
+const handleDeleteSchedule = (schedule: ScheduleDetail) => {
+  console.log('🗑️ 删除排班操作 - 选中的排班信息:', {
+    排班ID: schedule.id,
+    医生姓名: schedule.doctorName,
+    医生职称: schedule.doctorTitle,
+    时间段: schedule.timeSlot,
+    星期索引: schedule.dayIndex,
+    诊室: schedule.roomNumber,
+    剩余号源: schedule.remainingQuota
+  })
+  ElMessage.warning(`准备删除排班：${schedule.doctorName} - ${schedule.timeSlot}`)
+  // TODO: 后续可以在这里调用删除 API
+}
+
 
 
 
@@ -754,6 +799,16 @@ const getMockAdjustmentRequests = (): AdjustmentRequest[] => {
   padding: 8px;
   border: 1px solid #e4e7ed;
 }
+.doctor-schedule-card.clickable {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.doctor-schedule-card.clickable:hover {
+  background-color: #ecf5ff;
+  border-color: #409eff;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+}
 .doctor-name {
   font-weight: bold;
   font-size: 14px;
@@ -776,5 +831,9 @@ const getMockAdjustmentRequests = (): AdjustmentRequest[] => {
   color: #c0c4cc;
   text-align: center;
   padding: 20px 0;
+}
+.schedule-actions {
+  display: flex;
+  flex-direction: column;
 }
 </style>
