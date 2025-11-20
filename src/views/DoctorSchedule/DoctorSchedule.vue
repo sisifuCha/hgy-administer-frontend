@@ -429,14 +429,12 @@ onMounted(() => {
     { id: 'DEP021', name: '儿科门诊' },
     { id: 'DEP022', name: '眼科门诊' },
   ]
-  doctorOptions.value = [
-    { userId: '1', userName: '张医生', doctorSpeciality: '内科' },
-    { userId: '2', userName: '李医生', doctorSpeciality: '外科' },
-  ]
   // 使用模拟数据
   doctorOptions.value = [
     { userId: '1', userName: '张医生', doctorSpeciality: '内科' },
     { userId: '2', userName: '李医生', doctorSpeciality: '外科' },
+    { userId: '3', userName: '李明喜', doctorSpeciality: '心内科' },
+    { userId: '4', userName: '刘炳岩', doctorSpeciality: '骨科' },
   ]
   adjustmentRequests.value = getMockAdjustmentRequests()
 })

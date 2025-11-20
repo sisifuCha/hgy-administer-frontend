@@ -97,10 +97,7 @@ export const getSchedules = (params) => {
  * @returns {Promise<void>}
  */
 export const createNextWeekSchedule = (scheduleData, week) => {
-  return api({
-    url: '/admin/CreateNextWeekSchedule',
-    method: 'post',
-    data: scheduleData,
+  return api.post('/admin/CreateNextWeekSchedule', scheduleData, {
     params: { week }
   })
 }
