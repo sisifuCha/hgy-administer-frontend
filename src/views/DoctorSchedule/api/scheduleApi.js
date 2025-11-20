@@ -69,5 +69,5 @@ export const rejectAdjustment = (requestId) => {
  * @returns {Promise<Object>} 历史排班数据
  */
 export const getSchedulesHistory = (params) => {
-  return api.get('/admin/GetSchedulesHistory', { params })
+  return api.get('/admin/GetSchedulesHistory', params)
 }
