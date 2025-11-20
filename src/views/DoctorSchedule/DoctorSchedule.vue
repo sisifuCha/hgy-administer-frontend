@@ -40,7 +40,7 @@
               </el-form-item>
             </el-col>
             <el-col :span="6">
-              <el-button type="primary" @click="handleQuery" :loading="loading">查询</el-button>
+              <el-button type="primary" @click="handleQueryClick" :loading="loading">查询</el-button>
               <el-button @click="handleResetQuery">重置</el-button>
             </el-col>
           </el-row>
@@ -223,7 +223,7 @@ import { ref, reactive, onMounted, computed,watch } from 'vue'
 import { ElMessage,ElMessageBox } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 // 导入你的 API 函数
-import { getSchedulesHistory } from './api/scheduleApi.js'
+import { getSchedulesHistory, getSchedules } from './api/scheduleApi.js'
 // import { getDoctorSchedule, addSchedule } from './api/scheduleApi.js'
 // import { getDepartmentOptions } from '@/views/DoctorQuery/api/doctorApi.js'
 // import { getDoctorListWithFilter } from '@/views/DoctorQuery/api/doctorApi.js'
@@ -410,13 +410,31 @@ const fetchInitialData = async () => {
   }
 }
 
-const handleQuery = async () => {
+// 统一的查询入口：根据用户选择决定调用哪个接口
+const handleQueryClick = () => {
   if (!queryForm.departmentId) {
     ElMessage.warning('请选择科室')
     return
   }
   if (!queryForm.week && !queryForm.selectedDate) {
     ElMessage.warning('请选择周次或指定日期')
+    return
+  }
+
+  // 根据用户选择的查询方式决定调用哪个接口
+  if (queryForm.week) {
+    // 选择了周次（0/1），调用 /admin/getSchedules 接口
+    handleQueryByWeek()
+  } else if (queryForm.selectedDate) {
+    // 选择了具体日期，调用 /admin/GetSchedulesHistory 接口
+    handleQuery()
+  }
+}
+
+// 新方法：处理周次查询（使用 /admin/getSchedules 接口）
+const handleQueryByWeek = async () => {
+  if (!queryForm.departmentId) {
+    ElMessage.warning('请选择科室')
     return
   }
 
@@ -429,36 +447,54 @@ const handleQuery = async () => {
       return
     }
 
-    let response
-    // 情况1：用户选择了指定日期 - 调用新接口 GetSchedulesHistory
-    if (queryForm.selectedDate) {
-      const params = {
-        date: queryForm.selectedDate,  // 格式：'2025-11-20'
-        depart_name: selectedDept.name  // 使用科室名称
-      }
-      console.log('调用历史排班接口 - 根据日期查询:', params)
-      response = await getSchedulesHistory(params)
-    }
-    // 情况2：用户选择了周次（当前周/下一周）- 调用原接口
-    else if (queryForm.week) {
-      // 计算该周的某个日期（比如周一）
-      let targetDate = new Date()
-      if (queryForm.week === 'next') {
-        targetDate.setDate(targetDate.getDate() + 7)
-      }
-      // 计算周一的日期
-      const currentDay = targetDate.getDay() || 7
-      const mondayDate = new Date(targetDate)
-      mondayDate.setDate(targetDate.getDate() - (currentDay - 1))
-      const dateStr = mondayDate.toISOString().split('T')[0]
+    // 将 week 值转换为 0 或 1
+    const weekNumber = queryForm.week === 'current' ? 0 : 1
 
-      const params = {
-        date: dateStr,
-        depart_name: selectedDept.name  // 使用科室名称
-      }
-      console.log('调用历史排班接口 - 根据周次查询:', params)
-      response = await getSchedulesHistory(params)
+    const params = {
+      week: weekNumber,  // 0=当前周，1=下一周
+      depart_name: selectedDept.name  // 使用科室名称
     }
+
+    console.log('调用周次排班接口 - 根据周次查询:', params)
+    const response = await getSchedules(params)
+
+    // 处理响应数据
+    scheduleDetails.value = response || []
+    showScheduleTable.value = true
+  } catch (error) {
+    console.error('获取排班数据失败', error)
+    ElMessage.error('获取排班数据失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 保留原方法：处理日期查询（使用 /admin/GetSchedulesHistory 接口）
+const handleQuery = async () => {
+  if (!queryForm.departmentId) {
+    ElMessage.warning('请选择科室')
+    return
+  }
+  if (!queryForm.selectedDate) {
+    ElMessage.warning('请选择日期')
+    return
+  }
+
+  loading.value = true
+  try {
+    // 根据选中的科室ID找到对应的科室名称
+    const selectedDept = departments.value.find(dept => dept.id === queryForm.departmentId)
+    if (!selectedDept) {
+      ElMessage.error('未找到选中的科室信息')
+      return
+    }
+
+    const params = {
+      date: queryForm.selectedDate,  // 格式：'2025-11-20'
+      depart_name: selectedDept.name  // 使用科室名称
+    }
+    console.log('调用历史排班接口 - 根据日期查询:', params)
+    const response = await getSchedulesHistory(params)
 
     // 处理响应数据
     scheduleDetails.value = response || []
