@@ -108,19 +108,42 @@ export default {
       try {
         // 调用后端API进行登录验证
         // 使用配置好的api实例确保请求正确发送到后端
-        const token = await api.post('/admin/login', {
+        const response = await api.post('/admin/login', {
           password: loginForm.password
         });
 
+        console.log('🔍 登录响应数据:', response);
+
+        // 从响应中提取 token
+        // 支持多种后端返回格式：
+        // 1. { code: 200, data: "token值", message: "..." }
+        // 2. { token: "token值" }
+        // 3. 直接返回 "token值"
+        let token = null;
+        if (response.data) {
+          if (typeof response.data === 'string') {
+            // 情况3: 直接返回 token 字符串
+            token = response.data;
+          } else if (response.data.data) {
+            // 情况1: { code: 200, data: "token", ... }
+            token = response.data.data;
+          } else if (response.data.token) {
+            // 情况2: { token: "token值" }
+            token = response.data.token;
+          }
+        }
+
+        console.log('🔑 提取的 token:', token);
+
         if (token) {
           alert('登录成功');
-          localStorage.setItem('token', token); // 直接存入拿到的 token
+          localStorage.setItem('token', token); // 存储提取出的 token 字符串
           localStorage.setItem('isAuthenticated', 'true');
+          console.log('✅ Token 已保存到 localStorage');
           console.log('准备跳转，router 实例是:', router);
           router.push('/home/dashboard');
         } else {
-          console.error("登录组件捕获到错误:", error);
-          // 这种情况很少发生，除非后端成功但返回了空的 data
+          console.error("❌ 未能从响应中提取到 token");
           throw new Error('登录失败，未能获取到凭证');
         }
 
