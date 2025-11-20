@@ -455,7 +455,17 @@ const handleQueryByWeek = async () => {
       depart_name: selectedDept.name  // 使用科室名称
     }
 
-    console.log('调用周次排班接口 - 根据周次查询:', params)
+    console.log('==================== 周次查询调试信息 ====================')
+    console.log('queryForm.week:', queryForm.week)
+    console.log('weekNumber:', weekNumber)
+    console.log('selectedDept:', selectedDept)
+    console.log('完整请求参数:', params)
+    console.log('参数类型检查:', {
+      week: typeof params.week,
+      depart_name: typeof params.depart_name
+    })
+    console.log('========================================================')
+
     const response = await getSchedules(params)
 
     // 处理响应数据
