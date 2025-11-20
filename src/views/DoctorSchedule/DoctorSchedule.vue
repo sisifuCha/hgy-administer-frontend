@@ -468,8 +468,25 @@ const handleQueryByWeek = async () => {
 
     const response = await getSchedules(params)
 
-    // 处理响应数据
-    scheduleDetails.value = response || []
+    console.log('==================== 后端返回数据结构 ====================')
+    console.log('response:', response)
+    console.log('response 类型:', typeof response)
+    console.log('response 是否为数组:', Array.isArray(response))
+    console.log('response 的键:', response ? Object.keys(response) : 'null')
+    console.log('========================================================')
+
+    // 处理响应数据 - 确保是数组格式
+    if (Array.isArray(response)) {
+      scheduleDetails.value = response
+    } else if (response && typeof response === 'object') {
+      // 如果返回的是对象，尝试提取数据数组
+      scheduleDetails.value = response.schedules || response.data || response.list || []
+      console.log('⚠️ 后端返回的不是数组，已尝试提取数据:', scheduleDetails.value)
+    } else {
+      scheduleDetails.value = []
+      console.warn('⚠️ 后端返回的数据格式不正确')
+    }
+
     showScheduleTable.value = true
   } catch (error) {
     console.error('获取排班数据失败', error)
