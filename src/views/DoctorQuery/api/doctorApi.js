@@ -1,6 +1,4 @@
 import api from '@/utils/api'
-//import {request} from "axios";
-// 获取医生列表（分页 + 条件过滤）
 export const getDoctorListWithFilter = async (data) => {
   // GET 请求传参必须用 params
   const response = await api.post('/admin/getDoctors', data)
@@ -13,24 +11,14 @@ export const getDoctorListWithFilter = async (data) => {
  * @returns {Promise<Array<{label: string, value: string}>>} 科室选项列表
  */
 export const getDepartmentOptions = async () => {
-  return api(
-    {
-      url: '/admin/options/departments',
-      method: 'get'
-    }
-  )
+  return api.get('/admin/options/departments');
 }
 /**
  * @description 获取职称选项列表
  * @returns {Promise<Array<{value: string, label: string}>>} 职称选项列表
  */
 export const getTitleOptions = async () => {
-  return api(
-    {
-      url: '/admin/options/getTitleOptions',
-      method: 'get'
-    }
-  )
+  return api.get('/admin/options/getTitleOptions');
 }
 // 获取单个医生信息
 export const getDoctorById = (doctorId) => {
