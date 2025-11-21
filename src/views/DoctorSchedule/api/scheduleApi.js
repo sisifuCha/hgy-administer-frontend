@@ -60,3 +60,55 @@ export const approveAdjustment = (requestId) => {
 export const rejectAdjustment = (requestId) => {
   return api.post(`/admin/schedules/adjustments/${requestId}/reject`)
 }
+
+/**
+ * @description 获取指定科室的历史排班
+ * @param {Object} params - 查询参数
+ * @param {string} params.date - 日期（YYYY-MM-DD格式）
+ * @param {string} params.depart_name - 科室名称
+ * @returns {Promise<Object>} 历史排班数据
+ */
+export const getSchedulesHistory = (params) => {
+  return api.get('/admin/GetSchedulesHistory', params)
+}
+
+/**
+ * @description 根据周次获取排班信息
+ * @param {Object} params - 查询参数
+ * @param {number} params.week - 周次标识：0=当前周，1=下一周
+ * @param {string} params.departName - 科室名称
+ * @returns {Promise<Array>} 排班信息列表
+ */
+export const getSchedules = (params) => {
+  return api.get('/admin/getSchedules', params)
+}
+
+/**
+ * @description 创建下周排班
+ * @param {Object} scheduleData - 排班数据
+ * @param {Array} scheduleData.mon - 周一排班列表
+ * @param {Array} scheduleData.tue - 周二排班列表
+ * @param {Array} scheduleData.wed - 周三排班列表
+ * @param {Array} scheduleData.thu - 周四排班列表
+ * @param {Array} scheduleData.fri - 周五排班列表
+ * @param {Array} scheduleData.sat - 周六排班列表
+ * @param {Array} scheduleData.sun - 周日排班列表
+ * @param {number} week - 周次标识：0=当前周，1=下一周
+ * @returns {Promise<void>}
+ *
+ * 请求格式说明：
+ * - URL: POST /admin/CreateNextWeekSchedule?week=1
+ * - 请求体: { mon: [...], tue: [...], ... }
+ * - URL参数: week (从查询字符串获取)
+ */
+export const createNextWeekSchedule = (scheduleData, week) => {
+  console.log('📤 API层 - createNextWeekSchedule 调用参数:', {
+    scheduleData,
+    week,
+    requestUrl: `/admin/CreateNextWeekSchedule?week=${week}`
+  })
+
+  return api.post('/admin/CreateNextWeekSchedule', scheduleData, {
+    params: { week }
+  })
+}
