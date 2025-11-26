@@ -263,12 +263,18 @@ import { ref, reactive, onMounted, computed,watch } from 'vue'
 import { ElMessage,ElMessageBox } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 // 导入你的 API 函数
+// @ts-ignore
 import { getSchedulesHistory, getSchedules, createNextWeekSchedule } from './api/scheduleApi.js'
 // import { getDoctorSchedule, addSchedule } from './api/scheduleApi.js'
 // import { getDepartmentOptions } from '@/views/DoctorQuery/api/doctorApi.js'
 // import { getDoctorListWithFilter } from '@/views/DoctorQuery/api/doctorApi.js'
 
-// ==================== 1. 定义类型接口 ====================
+// ==================== 定义类型接口 ====================
+type DayOfWeek = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+interface WeekDay {
+  key: DayOfWeek;
+  label: string;
+}
 // 科室类型
 interface Department {
   id: string;
@@ -324,6 +330,14 @@ const queryForm = reactive({
 
 const showScheduleTable = ref(false)
 const scheduleData = ref([{ timeSlot: '上午' }, { timeSlot: '下午' }])
+const dayMap: Record<string, number> = {
+  'mon': 0, 'tue': 1, 'wed': 2, 'thu': 3, 'fri': 4, 'sat': 5, 'sun': 6
+}
+
+const timeSlotMap: Record<string, string> = {
+  'TIME0001': '上午',
+  'TIME0002': '下午'
+}
 
 // --- 新增功能状态 ---
 const addFormRef = ref<FormInstance>()
@@ -341,7 +355,7 @@ const addScheduleForm = reactive({
 })
 
 // 一周天数列表
-const weekDaysList = [
+const weekDaysList:WeekDay[] = [
   { key: 'mon', label: '周一' },
   { key: 'tue', label: '周二' },
   { key: 'wed', label: '周三' },
@@ -431,10 +445,10 @@ onMounted(() => {
   ]
   // 使用模拟数据
   doctorOptions.value = [
-    { userId: '1', userName: '张医生', doctorSpeciality: '内科' },
-    { userId: '2', userName: '李医生', doctorSpeciality: '外科' },
-    { userId: '3', userName: '李明喜', doctorSpeciality: '心内科' },
-    { userId: '4', userName: '刘炳岩', doctorSpeciality: '骨科' },
+    { userId: '3', userName: '李明喜', doctorSpeciality: '泌尿外科' },
+    { userId: '4', userName: '刘炳岩', doctorSpeciality: '泌尿外科' },
+    { userId: '5', userName: '王崇慧', doctorSpeciality: '泌尿外科' },
+    { userId: '6', userName: '朱燕林', doctorSpeciality: '妇产科' }
   ]
   adjustmentRequests.value = getMockAdjustmentRequests()
 })
@@ -485,7 +499,7 @@ const handleQueryClick = () => {
   }
 }
 
-// 新方法：处理周次查询（使用 /admin/getSchedules 接口）
+// 处理周次查询（使用 /admin/getSchedules 接口） 输入相对周次进行查询
 const handleQueryByWeek = async () => {
   if (!queryForm.departmentId) {
     ElMessage.warning('请选择科室')
@@ -533,20 +547,8 @@ const handleQueryByWeek = async () => {
     const convertedData: ScheduleDetail[] = []
 
     if (response && typeof response === 'object') {
-      // 星期映射：mon=0, tue=1, wed=2, thu=3, fri=4, sat=5, sun=6
-      const dayMap: Record<string, number> = {
-        'mon': 0, 'tue': 1, 'wed': 2, 'thu': 3, 'fri': 4, 'sat': 5, 'sun': 6
-      }
-
-      // 时间段映射
-      const timeSlotMap: Record<string, string> = {
-        'TIME0001': '上午',
-        'TIME0002': '下午'
-      }
-
-      // 遍历每个星期的数据
       Object.keys(response).forEach(dayKey => {
-        const dayIndex = dayMap[dayKey]
+        const dayIndex = dayMap[dayKey] as number // 明确告诉 TypeScript 这是 number
         const schedules = response[dayKey]
 
         if (Array.isArray(schedules)) {
@@ -576,7 +578,7 @@ const handleQueryByWeek = async () => {
   }
 }
 
-// 保留原方法：处理日期查询（使用 /admin/GetSchedulesHistory 接口）
+// 处理日期查询（使用 /admin/GetSchedulesHistory 接口）
 const handleQuery = async () => {
   if (!queryForm.departmentId) {
     ElMessage.warning('请选择科室')
@@ -602,10 +604,39 @@ const handleQuery = async () => {
     }
     console.log('调用历史排班接口 - 根据日期查询:', params)
     const response = await getSchedulesHistory(params)
+    console.log('后端返回数据:', response)
+    //做一个数据结构转化
+    const convertedData: ScheduleDetail[] = []
+    if (response && typeof response === 'object'){
+      console.log('response 的键:', Object.keys(response))
+      Object.keys(response).forEach(dayKey => {
+        const dayIndex = dayMap[dayKey]
+        const daySchedules = response[dayKey]
 
-    // 处理响应数据
-    scheduleDetails.value = response || []
+        if (Array.isArray(daySchedules)) {
+          daySchedules.forEach((schedule: any) => {
+            convertedData.push({
+              id: schedule.id || `${dayKey}_${schedule.template_id}`, // 如果没有id，生成一个
+              timeSlot: timeSlotMap[schedule.template_id] || '未知',
+              dayIndex: dayIndex,
+              doctorName: schedule.doc_name || '未知医生',
+              doctorTitle: schedule.title || '医师',
+              roomNumber: schedule.room_number || '待定', // 如果没有诊室信息
+              remainingQuota: parseInt(schedule.left_source_count) || 0
+            })
+          })
+        }
+      })
+    }else {
+      console.warn('❌ response.data 不存在或不是对象:', response)
+    }
+
+    console.log('✅ 转换后的数据:', convertedData)
+    console.log('✅ 转换后数据长度:', convertedData.length)
+    scheduleDetails.value = convertedData
     showScheduleTable.value = true
+    console.log('🔄 表格显示状态:', showScheduleTable.value)
+    console.log('🔄 排班数据长度:', scheduleDetails.value.length)
   } catch (error) {
     console.error('获取排班数据失败', error)
     ElMessage.error('获取排班数据失败')
@@ -687,22 +718,23 @@ const handleAddSchedule = async () => {
 
     await createNextWeekSchedule(addScheduleForm.schedules, addScheduleForm.week)
 
-    console.log('✅ 新增排班成功')
+    console.log('新增排班成功')
     ElMessage.success('新增排班成功！')
     resetAddForm()
     activeTab.value = 'query'
   } catch (error) {
-    console.error('❌ 新增排班失败详情:', {
-      message: error.message,
-      response: error.response,
-      config: error.config
+    const err =error as any
+    console.error('新增排班失败详情:', {
+      message: err.message,
+      response: err.response,
+      config: err.config
     })
 
     // 更详细的错误提示
-    if (error.message && error.message.includes('timeout')) {
+    if (err.message && err.message.includes('timeout')) {
       ElMessage.error('请求超时，可能是后端处理较慢，请联系后端开发人员检查')
-    } else if (error.response) {
-      ElMessage.error(`新增排班失败: ${error.response.data?.message || error.message}`)
+    } else if (err.response) {
+      ElMessage.error(`新增排班失败: ${err.response.data?.message || err.message}`)
     } else {
       ElMessage.error('新增排班失败，请检查网络连接')
     }
@@ -870,7 +902,6 @@ const getMockAdjustmentRequests = (): AdjustmentRequest[] => {
     }
   ]
 }
-
 </script>
 
 <style scoped>
