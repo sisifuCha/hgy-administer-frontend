@@ -420,10 +420,6 @@ onMounted(() => {
   // fetchInitialData()
   // fetchAdjustmentRequests() // 获取待审批列表
   departments.value = [
-    { id: 'DEP001', name: '内科' },
-    { id: 'DEP002', name: '外科' },
-    { id: 'DEP003', name: '妇产科' },
-    { id: 'DEP004', name: '儿科' },
     { id: 'DEP005', name: '心内科门诊' },
     { id: 'DEP006', name: '肾内科门诊' },
     { id: 'DEP007', name: '血液科门诊' },
@@ -437,6 +433,8 @@ onMounted(() => {
     { id: 'DEP015', name: '疼痛综合门诊' },
     { id: 'DEP016', name: '妇科门诊' },
     { id: 'DEP017', name: '产科门诊' },
+    { id: 'DEP018', name: '妇科内分泌及生殖门诊' },
+    { id: 'DEP019', name: '妇科计划生育门诊' },
     { id: 'DEP020', name: '综合妇科门诊' },
     { id: 'DEP021', name: '儿科门诊' },
     { id: 'DEP022', name: '眼科门诊' },
