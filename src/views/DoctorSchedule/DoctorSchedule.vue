@@ -58,33 +58,39 @@
             >
               <template #default="scope">
                 <div class="schedule-cell">
-                  <el-popover
+                  <div
                     v-for="schedule in getScheduleByTimeAndDay(scope.row.timeSlot, index)"
                     :key="schedule.id"
-                    placement="right"
-                    :width="200"
-                    trigger="click"
+                    class="doctor-schedule-card clickable"
                   >
-                    <template #reference>
-                      <div class="doctor-schedule-card clickable">
-                        <div class="doctor-name">{{ schedule.doctorName }} ({{ schedule.doctorTitle }})</div>
-                        <div class="schedule-info">
-                          <span class="room">{{ schedule.roomNumber }}</span>
-                          <span class="quota">余号: {{ schedule.remainingQuota }}</span>
-                        </div>
+                    <div class="card-content">
+                      <div class="doctor-name">{{ schedule.doctorName }} ({{ schedule.doctorTitle }})</div>
+                      <div class="schedule-info">
+                        <span class="room">{{ schedule.roomNumber }}</span>
+                        <span class="quota">余号: {{ schedule.remainingQuota }}</span>
                       </div>
-                    </template>
-                    <template #default>
-                      <div class="schedule-actions">
-                        <el-button type="primary" size="small" @click="handleAdjustSchedule(schedule)">
-                          调班
-                        </el-button>
-                        <el-button type="danger" size="small" @click="handleDeleteSchedule(schedule)">
-                          删除排班
-                        </el-button>
-                      </div>
-                    </template>
-                  </el-popover>
+                    </div>
+                    <div class="card-actions">
+                      <el-button
+                        type="primary"
+                        size="small"
+                        link
+                        @click="handleAdjustSchedule(schedule)"
+                        title="调班"
+                      >
+                        调班
+                      </el-button>
+                      <el-button
+                        type="danger"
+                        size="small"
+                        link
+                        @click="handleDeleteSchedule(schedule)"
+                        title="删除排班"
+                      >
+                        删除
+                      </el-button>
+                    </div>
+                  </div>
                   <div v-if="getScheduleByTimeAndDay(scope.row.timeSlot, index).length === 0" class="no-schedule">
                     暂无排班
                   </div>
@@ -264,7 +270,7 @@ import { ElMessage,ElMessageBox } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 // 导入你的 API 函数
 // @ts-ignore
-import { getSchedulesHistory, getSchedules, createNextWeekSchedule } from './api/scheduleApi.js'
+import { getSchedulesHistory, getSchedules, createNextWeekSchedule, deleteSchedule } from './api/scheduleApi.js'
 // import { getDoctorSchedule, addSchedule } from './api/scheduleApi.js'
 // import { getDepartmentOptions } from '@/views/DoctorQuery/api/doctorApi.js'
 // import { getDoctorListWithFilter } from '@/views/DoctorQuery/api/doctorApi.js'
@@ -854,7 +860,7 @@ const handleAdjustSchedule = (schedule: ScheduleDetail) => {
   // TODO: 后续可以在这里打开调班对话框或跳转到调班表单
 }
 
-const handleDeleteSchedule = (schedule: ScheduleDetail) => {
+const handleDeleteSchedule = async (schedule: ScheduleDetail) => {
   console.log('🗑️ 删除排班操作 - 选中的排班信息:', {
     排班ID: schedule.id,
     医生姓名: schedule.doctorName,
@@ -864,8 +870,38 @@ const handleDeleteSchedule = (schedule: ScheduleDetail) => {
     诊室: schedule.roomNumber,
     剩余号源: schedule.remainingQuota
   })
-  ElMessage.warning(`准备删除排班：${schedule.doctorName} - ${schedule.timeSlot}`)
-  // TODO: 后续可以在这里调用删除 API
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除 ${schedule.doctorName} 的排班吗？<br/>时间：${schedule.timeSlot}<br/>诊室：${schedule.roomNumber}`,
+      '删除排班确认',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        dangerouslyUseHTMLString: true
+      }
+    )
+
+    // 调用删除 API
+    loading.value = true
+    await deleteSchedule(schedule.id)
+
+    ElMessage.success('删除排班成功！')
+
+    // 从本地数据中移除该排班
+    scheduleDetails.value = scheduleDetails.value.filter(s => s.id !== schedule.id)
+
+  } catch (error) {
+    if (error === 'cancel') {
+      ElMessage.info('已取消删除')
+    } else {
+      console.error('删除排班失败:', error)
+      ElMessage.error('删除排班失败，请重试')
+    }
+  } finally {
+    loading.value = false
+  }
 }
 
 
@@ -922,9 +958,9 @@ const getMockAdjustmentRequests = (): AdjustmentRequest[] => {
   border-radius: 4px;
   padding: 8px;
   border: 1px solid #e4e7ed;
+  position: relative;
 }
 .doctor-schedule-card.clickable {
-  cursor: pointer;
   transition: all 0.3s ease;
 }
 .doctor-schedule-card.clickable:hover {
@@ -932,6 +968,23 @@ const getMockAdjustmentRequests = (): AdjustmentRequest[] => {
   border-color: #409eff;
   transform: translateY(-2px);
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+}
+.doctor-schedule-card.clickable:hover .card-actions {
+  opacity: 1;
+}
+.card-content {
+  margin-bottom: 4px;
+}
+.card-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.card-actions .el-button {
+  padding: 2px 4px;
+  font-size: 12px;
 }
 .doctor-name {
   font-weight: bold;
@@ -955,15 +1008,6 @@ const getMockAdjustmentRequests = (): AdjustmentRequest[] => {
   color: #c0c4cc;
   text-align: center;
   padding: 20px 0;
-}
-.schedule-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.schedule-actions .el-button {
-  width: 100%;
-  margin: 0;
 }
 
 /* 批量新增排班样式 */
