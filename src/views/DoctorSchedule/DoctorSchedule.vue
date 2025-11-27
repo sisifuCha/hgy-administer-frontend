@@ -438,6 +438,119 @@
         </el-table>
       </el-tab-pane>
     </el-tabs>
+
+    <!-- ==================== 调班申请对话框 ==================== -->
+    <el-dialog
+      v-model="adjustDialogVisible"
+      title="调班申请"
+      width="600px"
+      :close-on-click-modal="false"
+      @close="handleDialogClose"
+    >
+      <el-form
+        :model="adjustDialogForm"
+        :rules="adjustDialogFormRules"
+        ref="adjustDialogFormRef"
+        label-width="120px"
+      >
+        <!-- 显示当前排班信息 -->
+        <el-alert
+          :title="`当前排班：${adjustDialogForm.doctorName} - ${adjustDialogForm.originalScheduleInfo}`"
+          type="info"
+          :closable="false"
+          show-icon
+          style="margin-bottom: 20px;"
+        />
+
+        <!-- 调整类型 -->
+        <el-form-item label="调整类型" prop="changeType" required>
+          <el-radio-group v-model="adjustDialogForm.changeType">
+            <el-radio :value="0">调班</el-radio>
+            <el-radio :value="1">请假</el-radio>
+          </el-radio-group>
+        </el-form-item>
+
+        <!-- 调班信息 (仅在选择调班时显示) -->
+        <template v-if="adjustDialogForm.changeType === 0">
+          <el-form-item label="目标日期" prop="targetDate" required>
+            <el-date-picker
+              v-model="adjustDialogForm.targetDate"
+              type="date"
+              placeholder="选择目标日期"
+              value-format="YYYY-MM-DD"
+              style="width: 100%"
+            />
+          </el-form-item>
+
+          <el-form-item label="目标时段" prop="targetTimePeriod" required>
+            <el-select v-model="adjustDialogForm.targetTimePeriod" placeholder="请选择时段" style="width: 100%">
+              <el-option label="上午" :value="1"></el-option>
+              <el-option label="下午" :value="2"></el-option>
+            </el-select>
+          </el-form-item>
+
+          <el-form-item label="目标医生" prop="targetDoctorId">
+            <el-select
+              v-model="adjustDialogForm.targetDoctorId"
+              placeholder="可选：与其他医生换班"
+              filterable
+              clearable
+              style="width: 100%"
+            >
+              <el-option
+                v-for="doc in doctorOptions"
+                :key="doc.userId"
+                :label="`${doc.userName} (${doc.doctorSpeciality})`"
+                :value="doc.userId"
+              >
+              </el-option>
+            </el-select>
+          </el-form-item>
+        </template>
+
+        <!-- 请假信息 (仅在选择请假时显示) -->
+        <template v-if="adjustDialogForm.changeType === 1">
+          <el-form-item label="请假天数" prop="daysOff" required>
+            <el-input-number
+              v-model="adjustDialogForm.daysOff"
+              :min="1"
+              :max="30"
+              placeholder="请输入请假天数"
+              style="width: 100%"
+            />
+          </el-form-item>
+
+          <el-alert
+            title="注意：请假将从原班次开始计算天数"
+            type="info"
+            show-icon
+            :closable="false"
+            style="margin-top: 10px;"
+          />
+        </template>
+
+        <!-- 调整原因 -->
+        <el-form-item label="调整原因" prop="reason" required>
+          <el-input
+            v-model="adjustDialogForm.reason"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入调整原因（必填）"
+            maxlength="200"
+            show-word-limit
+          />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="adjustDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleDialogSubmit" :loading="adjustDialogLoading">
+            提交申请
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -599,6 +712,25 @@ const adjustForm = reactive({
   reason: ''                  // 调整原因
 })
 
+// --- 调班申请对话框状态 ---
+const adjustDialogVisible = ref(false)
+const adjustDialogFormRef = ref<FormInstance>()
+const adjustDialogLoading = ref(false)
+const dialogSourceSchedulesLoading = ref(false)
+const dialogSourceSchedules = ref<ScheduleOption[]>([])
+const adjustDialogForm = reactive({
+  doctorId: '',
+  doctorName: '',             // 用于显示
+  originalScheduleId: '',
+  originalScheduleInfo: '',   // 用于显示
+  changeType: 0,
+  targetDate: '',
+  targetTimePeriod: 1,
+  targetDoctorId: '',
+  daysOff: 1,
+  reason: ''
+})
+
 // --- 调班审批状态 ---
 const requestsLoading = ref(false)
 const adjustmentRequests = ref<AdjustmentRequest[]>([])
@@ -664,6 +796,40 @@ const adjustFormRules = computed(() => {
     }
   } else {
     // 请假时的验证规则
+    return {
+      ...baseRules,
+      daysOff: [
+        { required: true, message: '请输入请假天数', trigger: 'blur' },
+        { type: 'number', min: 1, max: 30, message: '请假天数必须在 1-30 天之间', trigger: 'blur' }
+      ]
+    }
+  }
+})
+
+// 调班申请对话框表单验证规则
+const adjustDialogFormRules = computed(() => {
+  const baseRules = {
+    changeType: [
+      { required: true, message: '请选择调整类型', trigger: 'change' }
+    ],
+    reason: [
+      { required: true, message: '请输入调整原因', trigger: 'blur' },
+      { min: 2, max: 200, message: '调整原因长度在 2 到 200 个字符', trigger: 'blur' }
+    ]
+  }
+
+  // 根据调整类型动态添加验证规则
+  if (adjustDialogForm.changeType === 0) {
+    return {
+      ...baseRules,
+      targetDate: [
+        { required: true, message: '请选择目标日期', trigger: 'change' }
+      ],
+      targetTimePeriod: [
+        { required: true, message: '请选择目标时段', trigger: 'change' }
+      ]
+    }
+  } else {
     return {
       ...baseRules,
       daysOff: [
@@ -1114,6 +1280,82 @@ const resetAdjustForm = () => {
   sourceSchedules.value = []
 }
 
+// --- 调班申请对话框相关方法 ---
+// 重置对话框表单
+const resetAdjustDialogForm = () => {
+  if (adjustDialogFormRef.value) {
+    adjustDialogFormRef.value.resetFields()
+  }
+  adjustDialogForm.doctorId = ''
+  adjustDialogForm.doctorName = ''
+  adjustDialogForm.originalScheduleId = ''
+  adjustDialogForm.originalScheduleInfo = ''
+  adjustDialogForm.changeType = 0
+  adjustDialogForm.targetDate = ''
+  adjustDialogForm.targetTimePeriod = 1
+  adjustDialogForm.targetDoctorId = ''
+  adjustDialogForm.daysOff = 1
+  adjustDialogForm.reason = ''
+}
+
+// 关闭对话框
+const handleDialogClose = () => {
+  resetAdjustDialogForm()
+}
+
+// 提交对话框表单
+const handleDialogSubmit = async () => {
+  if (!adjustDialogFormRef.value) return
+
+  try {
+    // 验证表单
+    await adjustDialogFormRef.value.validate()
+
+    adjustDialogLoading.value = true
+
+    // 构造请求数据
+    const requestData: any = {
+      doctorId: adjustDialogForm.doctorId,
+      originalScheduleId: adjustDialogForm.originalScheduleId,
+      changeType: adjustDialogForm.changeType,
+      reason: adjustDialogForm.reason
+    }
+
+    // 根据调整类型添加相应字段
+    if (adjustDialogForm.changeType === 0) {
+      // 调班类型
+      requestData.targetDate = adjustDialogForm.targetDate
+      requestData.targetTimePeriod = adjustDialogForm.targetTimePeriod
+      if (adjustDialogForm.targetDoctorId) {
+        requestData.targetDoctorId = adjustDialogForm.targetDoctorId
+      }
+    } else {
+      // 请假类型
+      requestData.daysOff = adjustDialogForm.daysOff
+    }
+
+    console.log('对话框提交的调班申请数据:', requestData)
+
+    // 调用API
+    await submitScheduleChangeRequest(requestData)
+
+    ElMessage.success('调班申请提交成功！')
+
+    // 关闭对话框
+    adjustDialogVisible.value = false
+
+    // 重新查询排班数据（可选）
+    // handleQueryClick()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('提交调班申请失败:', error)
+      ElMessage.error(error.message || '提交失败，请重试')
+    }
+  } finally {
+    adjustDialogLoading.value = false
+  }
+}
+
 // --- 调班审批相关方法 ---
 const fetchAdjustmentRequests = async () => {
   requestsLoading.value = true
@@ -1163,28 +1405,21 @@ const handleAdjustSchedule = (schedule: ScheduleDetail) => {
     剩余号源: schedule.remainingQuota
   })
 
-  // 重置调班表单
-  resetAdjustForm()
+  // 计算日期信息（根据weekDays和dayIndex）
+  const dayInfo = weekDays.value[schedule.dayIndex]
+  const scheduleInfo = dayInfo ? `${dayInfo.date} ${schedule.timeSlot}` : schedule.timeSlot
 
-  // 切换到调班申请标签页
-  activeTab.value = 'adjust'
+  // 重置对话框表单
+  resetAdjustDialogForm()
 
-  // 延迟填充数据，确保标签页已切换
-  setTimeout(() => {
-    // 自动填充医生ID
-    if (schedule.doctorId) {
-      adjustForm.doctorId = schedule.doctorId
-      // 触发医生选择，加载该医生的班次列表
-      onSourceDoctorChange(schedule.doctorId).then(() => {
-        // 班次加载完成后，自动选中当前班次
-        adjustForm.originalScheduleId = schedule.id
-      })
-    } else {
-      ElMessage.warning('无法获取医生ID，请手动选择医生')
-    }
+  // 填充排班信息
+  adjustDialogForm.doctorId = schedule.doctorId
+  adjustDialogForm.doctorName = schedule.doctorName
+  adjustDialogForm.originalScheduleId = schedule.id
+  adjustDialogForm.originalScheduleInfo = scheduleInfo
 
-    ElMessage.success(`已为您预填充：${schedule.doctorName} - ${schedule.timeSlot} 的调班信息`)
-  }, 100)
+  // 打开对话框
+  adjustDialogVisible.value = true
 }
 
 const handleDeleteSchedule = async (schedule: ScheduleDetail) => {
