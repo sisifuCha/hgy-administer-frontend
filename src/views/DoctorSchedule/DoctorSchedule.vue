@@ -1123,11 +1123,11 @@ const handleBatchStop = async () => {
       doc_ids: batchStopForm.doctorIds,
       start_time: {
         date: batchStopForm.startDate,
-        time_slot: batchStopForm.startTimeSlot
+        template_id: batchStopForm.startTimeSlot
       },
       end_time: {
         date: batchStopForm.endDate,
-        time_slot: batchStopForm.endTimeSlot
+        template_id: batchStopForm.endTimeSlot
       },
       reason: batchStopForm.reason
     }
