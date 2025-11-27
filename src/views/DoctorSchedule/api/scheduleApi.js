@@ -118,6 +118,6 @@ export const createNextWeekSchedule = (scheduleData, week) => {
  * @param {string} scheduleId - 排班ID
  * @returns {Promise<void>}
  */
-export const deleteSchedule = (scheduleId) => {
-  return api.delete(`/admin/schedules/${scheduleId}`)
+export const deleteSchedule = (data) => {
+  return api.post(`/admin/stopSingle/Schedule`,data)
 }

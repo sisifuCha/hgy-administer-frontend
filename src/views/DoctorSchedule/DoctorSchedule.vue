@@ -266,6 +266,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed,watch } from 'vue'
+import stopScheduleDialog from './stopScheduleDialog.vue'
 import { ElMessage,ElMessageBox } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 // 导入你的 API 函数
@@ -324,8 +325,10 @@ const activeTab = ref('query')
 
 // ==================== 2. 为 ref 添加类型 ====================
 const departments = ref<Department[]>([]) // 之前是 ref([])，现在是 ref<Department[]>([])
-const doctorOptions = ref<DoctorOption[]>([]) // 之前是 ref([])
-const scheduleDetails = ref<ScheduleDetail[]>([]) // 之前是 ref([])
+const doctorOptions = ref<DoctorOption[]>([])
+const scheduleDetails = ref<ScheduleDetail[]>([])
+const stopDialogVisible = ref(false)
+const selectedSchedule = ref(null)
 
 // --- 查询功能状态 ---
 const queryForm = reactive({
@@ -861,7 +864,7 @@ const handleAdjustSchedule = (schedule: ScheduleDetail) => {
 }
 
 const handleDeleteSchedule = async (schedule: ScheduleDetail) => {
-  console.log('🗑️ 删除排班操作 - 选中的排班信息:', {
+  console.log('删除排班操作 - 选中的排班信息:', {
     排班ID: schedule.id,
     医生姓名: schedule.doctorName,
     医生职称: schedule.doctorTitle,
@@ -872,20 +875,25 @@ const handleDeleteSchedule = async (schedule: ScheduleDetail) => {
   })
 
   try {
-    await ElMessageBox.confirm(
-      `确定要删除 ${schedule.doctorName} 的排班吗？<br/>时间：${schedule.timeSlot}<br/>诊室：${schedule.roomNumber}`,
+    const {value:reason}=await ElMessageBox.prompt(
+      `正在设置<b> ${schedule.doctorName} 的排班为停诊</b><br/>
+        时间：${schedule.timeSlot}<br/>诊室：${schedule.roomNumber}<br/><br/>
+       <b>请输入停诊理由:</b>`,
       '删除排班确认',
       {
         confirmButtonText: '确定删除',
         cancelButtonText: '取消',
-        type: 'warning',
-        dangerouslyUseHTMLString: true
+        dangerouslyUseHTMLString: true,
+        inputType:'textarea',
+        inputPlaceholder: '请输入停诊理由',
+        inputValidator: (value) => value.trim().length>0,
+        inputErrorMessage:'删除理由不能为空'
       }
     )
 
     // 调用删除 API
     loading.value = true
-    await deleteSchedule(schedule.id)
+    await deleteSchedule({scheduleId:schedule.id, reason:reason})
 
     ElMessage.success('删除排班成功！')
 
