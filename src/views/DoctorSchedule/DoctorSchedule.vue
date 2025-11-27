@@ -477,6 +477,7 @@ interface ScheduleDetail {
   id: string;
   timeSlot: string;
   dayIndex: number;
+  doctorId: string;
   doctorName: string;
   doctorTitle: string;
   roomNumber: string;
@@ -815,6 +816,7 @@ const handleQueryByWeek = async () => {
               id: schedule.schedule_id || '',
               timeSlot: timeSlotMap[schedule.schedule_time_id] || '未知',
               dayIndex: dayIndex,
+              doctorId: schedule.doctor_id || '',
               doctorName: schedule.doctor_name || `医生${schedule.doctor_id}`,  // 暂时使用 doctor_id
               doctorTitle: schedule.doctor_title || '医师',  // 默认职称
               roomNumber: schedule.room_number || '待定',  // 默认诊室
@@ -877,6 +879,7 @@ const handleQuery = async () => {
               id: schedule.id || `${dayKey}_${schedule.template_id}`, // 如果没有id，生成一个
               timeSlot: timeSlotMap[schedule.template_id] || '未知',
               dayIndex: dayIndex,
+              doctorId: schedule.doc_id || schedule.doctor_id || '',
               doctorName: schedule.doc_name || '未知医生',
               doctorTitle: schedule.title || '医师',
               roomNumber: schedule.room_number || '待定', // 如果没有诊室信息
@@ -1151,6 +1154,7 @@ const handleReject = async (requestId: string) => {
 const handleAdjustSchedule = (schedule: ScheduleDetail) => {
   console.log('🔄 调班操作 - 选中的排班信息:', {
     排班ID: schedule.id,
+    医生ID: schedule.doctorId,
     医生姓名: schedule.doctorName,
     医生职称: schedule.doctorTitle,
     时间段: schedule.timeSlot,
@@ -1158,8 +1162,29 @@ const handleAdjustSchedule = (schedule: ScheduleDetail) => {
     诊室: schedule.roomNumber,
     剩余号源: schedule.remainingQuota
   })
-  ElMessage.info(`正在调班：${schedule.doctorName} - ${schedule.timeSlot}`)
-  // TODO: 后续可以在这里打开调班对话框或跳转到调班表单
+
+  // 重置调班表单
+  resetAdjustForm()
+
+  // 切换到调班申请标签页
+  activeTab.value = 'adjust'
+
+  // 延迟填充数据，确保标签页已切换
+  setTimeout(() => {
+    // 自动填充医生ID
+    if (schedule.doctorId) {
+      adjustForm.doctorId = schedule.doctorId
+      // 触发医生选择，加载该医生的班次列表
+      onSourceDoctorChange(schedule.doctorId).then(() => {
+        // 班次加载完成后，自动选中当前班次
+        adjustForm.originalScheduleId = schedule.id
+      })
+    } else {
+      ElMessage.warning('无法获取医生ID，请手动选择医生')
+    }
+
+    ElMessage.success(`已为您预填充：${schedule.doctorName} - ${schedule.timeSlot} 的调班信息`)
+  }, 100)
 }
 
 const handleDeleteSchedule = async (schedule: ScheduleDetail) => {
