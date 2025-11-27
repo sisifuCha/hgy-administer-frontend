@@ -273,57 +273,130 @@
       <!-- ==================== 3. 调班申请标签页 (新功能) ==================== -->
       <el-tab-pane label="调班申请" name="adjust">
         <h2>医生调班申请</h2>
-        <el-form :model="adjustForm" ref="adjustFormRef" label-width="120px" style="max-width: 800px;">
+        <el-form :model="adjustForm" :rules="adjustFormRules" ref="adjustFormRef" label-width="120px" style="max-width: 800px;">
+          <!-- 基本信息卡片 -->
           <el-card class="box-card" shadow="never">
             <template #header>
               <div class="card-header">
-                <span>源班次 (要调走的班)</span>
+                <span>基本信息</span>
               </div>
             </template>
-            <el-form-item label="选择医生" prop="sourceDoctorId" required>
-              <el-select v-model="adjustForm.sourceDoctorId" placeholder="请选择医生" filterable @change="onSourceDoctorChange">
-                <el-option v-for="doc in doctorOptions" :key="doc.userId" :label="`${doc.userName} (${doc.doctorSpeciality})`" :value="doc.userId"></el-option>
+
+            <el-form-item label="调整类型" prop="changeType" required>
+              <el-radio-group v-model="adjustForm.changeType" @change="onChangeTypeSwitch">
+                <el-radio :value="0">调班</el-radio>
+                <el-radio :value="1">请假</el-radio>
+              </el-radio-group>
+            </el-form-item>
+
+            <el-form-item label="选择医生" prop="doctorId" required>
+              <el-select v-model="adjustForm.doctorId" placeholder="请选择医生" filterable style="width: 100%">
+                <el-option
+                  v-for="doc in doctorOptions"
+                  :key="doc.userId"
+                  :label="`${doc.userName} (${doc.doctorSpeciality})`"
+                  :value="doc.userId">
+                </el-option>
               </el-select>
             </el-form-item>
-            <el-form-item label="选择源班次" prop="sourceScheduleId" required>
-              <el-select v-model="adjustForm.sourceScheduleId" placeholder="请先选择医生以加载其班次" :loading="sourceSchedulesLoading">
-                <el-option v-for="sch in sourceSchedules" :key="sch.id" :label="`${sch.date} ${sch.timeSlot}`" :value="sch.id"></el-option>
+
+            <el-form-item label="原班次" prop="originalScheduleId" required>
+              <el-select
+                v-model="adjustForm.originalScheduleId"
+                placeholder="请先选择医生以加载其班次"
+                :loading="sourceSchedulesLoading"
+                style="width: 100%">
+                <el-option
+                  v-for="sch in sourceSchedules"
+                  :key="sch.id"
+                  :label="`${sch.date} ${sch.timeSlot}`"
+                  :value="sch.id">
+                </el-option>
               </el-select>
             </el-form-item>
           </el-card>
 
-          <el-card class="box-card" shadow="never" style="margin-top: 20px;">
+          <!-- 调班信息卡片 (仅在选择调班时显示) -->
+          <el-card class="box-card" shadow="never" style="margin-top: 20px;" v-if="adjustForm.changeType === 0">
             <template #header>
               <div class="card-header">
-                <span>目的班次 (要调往的班)</span>
-                <el-switch v-model="adjustForm.isCancel" active-text="取消排班(放假)" @change="onCancelSwitchChange" />
+                <span>调班信息</span>
               </div>
             </template>
-            <div v-if="!adjustForm.isCancel">
-              <el-form-item label="选择医生" prop="destDoctorId">
-                <el-select v-model="adjustForm.destDoctorId" placeholder="可与其他医生换班" filterable clearable>
-                  <el-option v-for="doc in doctorOptions" :key="doc.userId" :label="`${doc.userName} (${doc.doctorSpeciality})`" :value="doc.userId"></el-option>
-                </el-select>
-              </el-form-item>
-              <el-form-item label="排班日期" prop="destDate">
-                <el-date-picker v-model="adjustForm.destDate" type="date" placeholder="选择日期" value-format="YYYY-MM-DD" />
-              </el-form-item>
-              <el-form-item label="时间段" prop="destTimeSlot">
-                <el-select v-model="adjustForm.destTimeSlot" placeholder="请选择时间段">
-                  <el-option label="上午" value="AM"></el-option>
-                  <el-option label="下午" value="PM"></el-option>
-                </el-select>
-              </el-form-item>
-            </div>
-            <el-alert v-else title="将直接取消源班次，为医生放假。" type="info" show-icon :closable="false" />
+
+            <el-form-item label="目标日期" prop="targetDate" required>
+              <el-date-picker
+                v-model="adjustForm.targetDate"
+                type="date"
+                placeholder="选择目标日期"
+                value-format="YYYY-MM-DD"
+                style="width: 100%" />
+            </el-form-item>
+
+            <el-form-item label="目标时段" prop="targetTimePeriod" required>
+              <el-select v-model="adjustForm.targetTimePeriod" placeholder="请选择时段" style="width: 100%">
+                <el-option label="上午" :value="1"></el-option>
+                <el-option label="下午" :value="2"></el-option>
+              </el-select>
+            </el-form-item>
+
+            <el-form-item label="目标医生" prop="targetDoctorId">
+              <el-select
+                v-model="adjustForm.targetDoctorId"
+                placeholder="可选：与其他医生换班"
+                filterable
+                clearable
+                style="width: 100%">
+                <el-option
+                  v-for="doc in doctorOptions"
+                  :key="doc.userId"
+                  :label="`${doc.userName} (${doc.doctorSpeciality})`"
+                  :value="doc.userId">
+                </el-option>
+              </el-select>
+            </el-form-item>
           </el-card>
 
-          <el-form-item label="调班理由" prop="reason" required style="margin-top: 20px;">
-            <el-input v-model="adjustForm.reason" type="textarea" :rows="3" placeholder="请输入调班或取消排班的理由"></el-input>
+          <!-- 请假信息卡片 (仅在选择请假时显示) -->
+          <el-card class="box-card" shadow="never" style="margin-top: 20px;" v-if="adjustForm.changeType === 1">
+            <template #header>
+              <div class="card-header">
+                <span>请假信息</span>
+              </div>
+            </template>
+
+            <el-form-item label="请假天数" prop="daysOff" required>
+              <el-input-number
+                v-model="adjustForm.daysOff"
+                :min="1"
+                :max="30"
+                placeholder="请输入请假天数"
+                style="width: 100%" />
+            </el-form-item>
+
+            <el-alert
+              title="注意：请假将从原班次开始计算天数"
+              type="info"
+              show-icon
+              :closable="false"
+              style="margin-top: 10px;" />
+          </el-card>
+
+          <el-form-item label="调整原因" prop="reason" required style="margin-top: 20px;">
+            <el-input
+              v-model="adjustForm.reason"
+              type="textarea"
+              :rows="3"
+              placeholder="请输入调整原因（必填）"
+              maxlength="200"
+              show-word-limit />
           </el-form-item>
 
           <el-form-item>
-            <el-button type="primary" @click="handleAdjustSubmit" :loading="adjustLoading">提交申请</el-button>
+            <el-button type="primary" @click="handleAdjustSubmit" :loading="adjustLoading">
+              提交申请
+            </el-button>
+            <el-button @click="resetAdjustForm">重置</el-button>
           </el-form-item>
         </el-form>
       </el-tab-pane>
@@ -375,7 +448,7 @@ import { ElMessage,ElMessageBox } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 // 导入你的 API 函数
 // @ts-ignore
-import { getSchedulesHistory, getSchedules, createNextWeekSchedule, deleteSchedule, stopBatchSchedule } from './api/scheduleApi.js'
+import { getSchedulesHistory, getSchedules, createNextWeekSchedule, deleteSchedule, stopBatchSchedule, submitScheduleChangeRequest } from './api/scheduleApi.js'
 // import { getDoctorSchedule, addSchedule } from './api/scheduleApi.js'
 // import { getDepartmentOptions } from '@/views/DoctorQuery/api/doctorApi.js'
 // import { getDoctorListWithFilter } from '@/views/DoctorQuery/api/doctorApi.js'
@@ -515,13 +588,14 @@ const adjustLoading = ref(false)
 const sourceSchedulesLoading = ref(false)
 const sourceSchedules = ref<ScheduleOption[]>([])
 const adjustForm = reactive({
-  sourceDoctorId: '',
-  sourceScheduleId: '',
-  isCancel: false,
-  destDoctorId: '',
-  destDate: '',
-  destTimeSlot: '',
-  reason: ''
+  doctorId: '',               // 医生ID
+  originalScheduleId: '',     // 原班次ID
+  changeType: 0,              // 调整类型：0-调班, 1-请假
+  targetDate: '',             // 目标日期（调班时使用）
+  targetTimePeriod: 1,        // 目标时段编号（调班时使用，1-上午，2-下午）
+  targetDoctorId: '',         // 目标医生ID（调班时可选）
+  daysOff: 1,                 // 请假天数（请假时使用）
+  reason: ''                  // 调整原因
 })
 
 // --- 调班审批状态 ---
@@ -556,6 +630,48 @@ const batchStopRules = {
     { min: 2, max: 200, message: '停诊原因长度在 2 到 200 个字符', trigger: 'blur' }
   ]
 }
+
+// 调班申请表单验证规则
+const adjustFormRules = computed(() => {
+  const baseRules = {
+    changeType: [
+      { required: true, message: '请选择调整类型', trigger: 'change' }
+    ],
+    doctorId: [
+      { required: true, message: '请选择医生', trigger: 'change' }
+    ],
+    originalScheduleId: [
+      { required: true, message: '请选择原班次', trigger: 'change' }
+    ],
+    reason: [
+      { required: true, message: '请输入调整原因', trigger: 'blur' },
+      { min: 2, max: 200, message: '调整原因长度在 2 到 200 个字符', trigger: 'blur' }
+    ]
+  }
+
+  // 根据调整类型动态添加验证规则
+  if (adjustForm.changeType === 0) {
+    // 调班时的验证规则
+    return {
+      ...baseRules,
+      targetDate: [
+        { required: true, message: '请选择目标日期', trigger: 'change' }
+      ],
+      targetTimePeriod: [
+        { required: true, message: '请选择目标时段', trigger: 'change' }
+      ]
+    }
+  } else {
+    // 请假时的验证规则
+    return {
+      ...baseRules,
+      daysOff: [
+        { required: true, message: '请输入请假天数', trigger: 'blur' },
+        { type: 'number', min: 1, max: 30, message: '请假天数必须在 1-30 天之间', trigger: 'blur' }
+      ]
+    }
+  }
+})
 
 // --- 生命周期函数 ---
 onMounted(() => {
@@ -596,12 +712,12 @@ onMounted(() => {
 })
 // ==================== 监听器 ====================
 // 监听调班申请的医生选择，以动态加载其排班
-watch(() => adjustForm.sourceDoctorId, (newDoctorId) => {
+watch(() => adjustForm.doctorId, (newDoctorId) => {
   if (newDoctorId) {
     onSourceDoctorChange(newDoctorId)
   } else {
     sourceSchedules.value = []
-    adjustForm.sourceScheduleId = ''
+    adjustForm.originalScheduleId = ''
   }
 })
 
@@ -908,7 +1024,7 @@ const onSourceDoctorChange = async (doctorId: string) => {
       { id: 'sch_001', date: '2025-11-17', timeSlot: '上午' },
       { id: 'sch_002', date: '2025-11-18', timeSlot: '下午' },
     ]
-    adjustForm.sourceScheduleId = '' // 清空之前的选择
+    adjustForm.originalScheduleId = '' // 清空之前的选择
   } catch (error) {
     ElMessage.error('加载医生班次失败')
   } finally {
@@ -916,33 +1032,83 @@ const onSourceDoctorChange = async (doctorId: string) => {
   }
 }
 
-const onCancelSwitchChange = (isCancel: boolean) => {
-  if (isCancel) {
-    // 如果是取消排班，清空目的班次信息
-    adjustForm.destDoctorId = ''
-    adjustForm.destDate = ''
-    adjustForm.destTimeSlot = ''
+// 当切换调整类型时的处理
+const onChangeTypeSwitch = (changeType: number) => {
+  // 切换类型时清空相关字段
+  if (changeType === 1) {
+    // 切换到请假，清空调班相关字段
+    adjustForm.targetDate = ''
+    adjustForm.targetTimePeriod = 1
+    adjustForm.targetDoctorId = ''
+  } else {
+    // 切换到调班，清空请假相关字段
+    adjustForm.daysOff = 1
   }
 }
 
 const handleAdjustSubmit = async () => {
   if (!adjustFormRef.value) return
-  await adjustFormRef.value.validate(async (valid) => {
-    if (valid) {
-      adjustLoading.value = true
-      try {
-        console.log('提交的调班申请数据:', adjustForm)
-        // await requestScheduleAdjustment(adjustForm)
-        ElMessage.success('调班申请提交成功！')
-        // 成功后重置表单
-        adjustFormRef.value?.resetFields()
-      } catch (error) {
-        ElMessage.error('提交失败')
-      } finally {
-        adjustLoading.value = false
-      }
+
+  try {
+    // 验证表单
+    await adjustFormRef.value.validate()
+
+    adjustLoading.value = true
+
+    // 构造请求数据
+    const requestData: any = {
+      doctorId: adjustForm.doctorId,
+      originalScheduleId: adjustForm.originalScheduleId,
+      changeType: adjustForm.changeType,
+      reason: adjustForm.reason
     }
-  })
+
+    // 根据调整类型添加相应字段
+    if (adjustForm.changeType === 0) {
+      // 调班类型
+      requestData.targetDate = adjustForm.targetDate
+      requestData.targetTimePeriod = adjustForm.targetTimePeriod
+      if (adjustForm.targetDoctorId) {
+        requestData.targetDoctorId = adjustForm.targetDoctorId
+      }
+    } else {
+      // 请假类型
+      requestData.daysOff = adjustForm.daysOff
+    }
+
+    console.log('提交的调班申请数据:', requestData)
+
+    // 调用API
+    await submitScheduleChangeRequest(requestData)
+
+    ElMessage.success('调班申请提交成功！')
+
+    // 成功后重置表单
+    resetAdjustForm()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('提交调班申请失败:', error)
+      ElMessage.error(error.message || '提交失败，请重试')
+    }
+  } finally {
+    adjustLoading.value = false
+  }
+}
+
+// 重置调班申请表单
+const resetAdjustForm = () => {
+  if (adjustFormRef.value) {
+    adjustFormRef.value.resetFields()
+  }
+  adjustForm.doctorId = ''
+  adjustForm.originalScheduleId = ''
+  adjustForm.changeType = 0
+  adjustForm.targetDate = ''
+  adjustForm.targetTimePeriod = 1
+  adjustForm.targetDoctorId = ''
+  adjustForm.daysOff = 1
+  adjustForm.reason = ''
+  sourceSchedules.value = []
 }
 
 // --- 调班审批相关方法 ---
