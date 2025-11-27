@@ -112,3 +112,12 @@ export const createNextWeekSchedule = (scheduleData, week) => {
     params: { week }
   })
 }
+
+/**
+ * @description 删除排班
+ * @param {string} scheduleId - 排班ID
+ * @returns {Promise<void>}
+ */
+export const deleteSchedule = (data) => {
+  return api.post(`/admin/stopSingle/Schedule`,data)
+}
