@@ -408,6 +408,7 @@ interface ScheduleDetail {
   doctorTitle: string;
   roomNumber: string;
   remainingQuota: number;
+  templateId?: string; // 添加 template_id 字段，用于调班等操作
 }
 
 
@@ -702,7 +703,8 @@ const handleQueryByWeek = async () => {
               doctorName: schedule.doctor_name || `医生${schedule.doctor_id}`,  // 暂时使用 doctor_id
               doctorTitle: schedule.doctor_title || '医师',  // 默认职称
               roomNumber: schedule.room_number || '待定',  // 默认诊室
-              remainingQuota: schedule.available_slots || 0
+              remainingQuota: schedule.available_slots || 0,
+              templateId: schedule.schedule_time_id || ''  // 保存 template_id
             })
           })
         }
@@ -758,13 +760,14 @@ const handleQuery = async () => {
         if (Array.isArray(daySchedules)) {
           daySchedules.forEach((schedule: any) => {
             convertedData.push({
-              id: schedule.id || `${dayKey}_${schedule.template_id}`, // 如果没有id，生成一个
+              id: schedule.schedule_id || `${dayKey}_${schedule.template_id}`, // 使用真实的 schedule_id 字段
               timeSlot: timeSlotMap[schedule.template_id] || '未知',
               dayIndex: dayIndex,
               doctorName: schedule.doc_name || '未知医生',
               doctorTitle: schedule.title || '医师',
               roomNumber: schedule.room_number || '待定', // 如果没有诊室信息
-              remainingQuota: parseInt(schedule.left_source_count) || 0
+              remainingQuota: parseInt(schedule.left_source_count) || 0,
+              templateId: schedule.template_id || ''  // 保存 template_id
             })
           })
         }
@@ -985,6 +988,7 @@ const handleReject = async (requestId: string) => {
 const handleAdjustSchedule = (schedule: ScheduleDetail) => {
   console.log('🔄 调班操作 - 选中的排班信息:', {
     排班ID: schedule.id,
+    模板ID: schedule.templateId,
     医生姓名: schedule.doctorName,
     医生职称: schedule.doctorTitle,
     时间段: schedule.timeSlot,
@@ -994,11 +998,23 @@ const handleAdjustSchedule = (schedule: ScheduleDetail) => {
   })
   ElMessage.info(`正在调班：${schedule.doctorName} - ${schedule.timeSlot}`)
   // TODO: 后续可以在这里打开调班对话框或跳转到调班表单
+  // 调班请求应该使用 schedule.id (真实的 schedule_id) 和 schedule.templateId
+  // 例如：
+  // const adjustmentData = {
+  //   changeType: 0,
+  //   doctorId: "",
+  //   originalScheduleId: schedule.id,  // 使用真实的 schedule_id
+  //   templateId: schedule.templateId,   // 使用真实的 template_id
+  //   reason: "调班理由",
+  //   targetDate: "2025-11-28",
+  //   targetTimePeriod: 2
+  // }
 }
 
 const handleDeleteSchedule = async (schedule: ScheduleDetail) => {
   console.log('删除排班操作 - 选中的排班信息:', {
     排班ID: schedule.id,
+    模板ID: schedule.templateId,
     医生姓名: schedule.doctorName,
     医生职称: schedule.doctorTitle,
     时间段: schedule.timeSlot,
