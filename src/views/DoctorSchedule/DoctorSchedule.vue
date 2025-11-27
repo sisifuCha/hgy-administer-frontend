@@ -100,7 +100,7 @@
           </el-table>
 
           <!-- 批量停诊表单区域 -->
-          <el-divider content-position="left">批量停诊设置</el-divider>
+          <el-divider content-position="left" class="batch-stop-divider">批量停诊设置</el-divider>
           <el-card class="batch-stop-card" shadow="never">
             <el-form :model="batchStopForm" ref="batchStopFormRef" label-width="120px" :rules="batchStopRules">
               <el-row :gutter="20">
@@ -128,45 +128,53 @@
               <el-row :gutter="20">
                 <el-col :span="12">
                   <el-form-item label="起始时段" required>
-                    <el-space direction="vertical" style="width: 100%">
-                      <el-form-item prop="startDate" style="margin-bottom: 0">
-                        <el-date-picker
-                          v-model="batchStopForm.startDate"
-                          type="date"
-                          placeholder="选择开始日期"
-                          value-format="YYYY-MM-DD"
-                          style="width: 100%"
-                        />
-                      </el-form-item>
-                      <el-form-item prop="startTimeSlot" style="margin-bottom: 0">
-                        <el-select v-model="batchStopForm.startTimeSlot" placeholder="选择时段" style="width: 100%">
-                          <el-option label="上午" value="TIME0001"></el-option>
-                          <el-option label="下午" value="TIME0002"></el-option>
-                        </el-select>
-                      </el-form-item>
-                    </el-space>
+                    <el-row :gutter="10">
+                      <el-col :span="14">
+                        <el-form-item prop="startDate" style="margin-bottom: 0">
+                          <el-date-picker
+                            v-model="batchStopForm.startDate"
+                            type="date"
+                            placeholder="选择开始日期"
+                            value-format="YYYY-MM-DD"
+                            style="width: 100%"
+                          />
+                        </el-form-item>
+                      </el-col>
+                      <el-col :span="10">
+                        <el-form-item prop="startTimeSlot" style="margin-bottom: 0">
+                          <el-select v-model="batchStopForm.startTimeSlot" placeholder="选择时段" style="width: 100%">
+                            <el-option label="上午" value="TIME0001"></el-option>
+                            <el-option label="下午" value="TIME0002"></el-option>
+                          </el-select>
+                        </el-form-item>
+                      </el-col>
+                    </el-row>
                   </el-form-item>
                 </el-col>
 
                 <el-col :span="12">
                   <el-form-item label="终止时段" required>
-                    <el-space direction="vertical" style="width: 100%">
-                      <el-form-item prop="endDate" style="margin-bottom: 0">
-                        <el-date-picker
-                          v-model="batchStopForm.endDate"
-                          type="date"
-                          placeholder="选择结束日期"
-                          value-format="YYYY-MM-DD"
-                          style="width: 100%"
-                        />
-                      </el-form-item>
-                      <el-form-item prop="endTimeSlot" style="margin-bottom: 0">
-                        <el-select v-model="batchStopForm.endTimeSlot" placeholder="选择时段" style="width: 100%">
-                          <el-option label="上午" value="TIME0001"></el-option>
-                          <el-option label="下午" value="TIME0002"></el-option>
-                        </el-select>
-                      </el-form-item>
-                    </el-space>
+                    <el-row :gutter="10">
+                      <el-col :span="14">
+                        <el-form-item prop="endDate" style="margin-bottom: 0">
+                          <el-date-picker
+                            v-model="batchStopForm.endDate"
+                            type="date"
+                            placeholder="选择结束日期"
+                            value-format="YYYY-MM-DD"
+                            style="width: 100%"
+                          />
+                        </el-form-item>
+                      </el-col>
+                      <el-col :span="10">
+                        <el-form-item prop="endTimeSlot" style="margin-bottom: 0">
+                          <el-select v-model="batchStopForm.endTimeSlot" placeholder="选择时段" style="width: 100%">
+                            <el-option label="上午" value="TIME0001"></el-option>
+                            <el-option label="下午" value="TIME0002"></el-option>
+                          </el-select>
+                        </el-form-item>
+                      </el-col>
+                    </el-row>
                   </el-form-item>
                 </el-col>
               </el-row>
@@ -1067,14 +1075,44 @@ const handleBatchStop = async () => {
       }
     }
 
+    // 获取选中医生的名字列表
+    const selectedDoctorNames = batchStopForm.doctorIds
+      .map(id => {
+        const doctor = doctorOptions.value.find(doc => doc.userId === id)
+        return doctor ? doctor.userName : ''
+      })
+      .filter(name => name)
+
+    // 构造确认消息
+    const doctorListHtml = selectedDoctorNames.length <= 5
+      ? selectedDoctorNames.map(name => `<li>${name}</li>`).join('')
+      : selectedDoctorNames.slice(0, 5).map(name => `<li>${name}</li>`).join('') +
+        `<li>... 等共 ${selectedDoctorNames.length} 位医生</li>`
+
+    const confirmMessage = `
+      <div style="text-align: left;">
+        <p><b>将为以下医生设置停诊：</b></p>
+        <ul style="margin: 10px 0; padding-left: 20px;">
+          ${doctorListHtml}
+        </ul>
+        <p><b>停诊时段：</b></p>
+        <p style="margin-left: 20px;">
+          从 ${batchStopForm.startDate} ${batchStopForm.startTimeSlot === 'TIME0001' ? '上午' : '下午'}
+          到 ${batchStopForm.endDate} ${batchStopForm.endTimeSlot === 'TIME0001' ? '上午' : '下午'}
+        </p>
+        <p style="margin-top: 15px;">是否确认继续？</p>
+      </div>
+    `
+
     // 确认操作
     await ElMessageBox.confirm(
-      `您将为 ${batchStopForm.doctorIds.length} 位医生设置停诊，从 ${batchStopForm.startDate} ${batchStopForm.startTimeSlot === 'TIME0001' ? '上午' : '下午'} 到 ${batchStopForm.endDate} ${batchStopForm.endTimeSlot === 'TIME0001' ? '上午' : '下午'}。是否继续？`,
+      confirmMessage,
       '批量停诊确认',
       {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
-        type: 'warning'
+        type: 'warning',
+        dangerouslyUseHTMLString: true
       }
     )
 
@@ -1274,8 +1312,12 @@ const getMockAdjustmentRequests = (): AdjustmentRequest[] => {
 }
 
 /* 批量停诊样式 */
+.batch-stop-divider {
+  margin-top: 30px;
+  margin-bottom: 20px;
+}
+
 .batch-stop-card {
-  margin-top: 20px;
   border: 1px solid #e4e7ed;
   background-color: #f9fafc;
 }
