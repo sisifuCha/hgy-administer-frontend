@@ -62,9 +62,13 @@
                     v-for="schedule in getScheduleByTimeAndDay(scope.row.timeSlot, index)"
                     :key="schedule.id"
                     class="doctor-schedule-card clickable"
+                    :class="{ 'stopped': schedule.status === 'stopped' }"
                   >
                     <div class="card-content">
-                      <div class="doctor-name">{{ schedule.doctorName }} ({{ schedule.doctorTitle }})</div>
+                      <div class="doctor-name">
+                        {{ schedule.doctorName }} ({{ schedule.doctorTitle }})
+                        <el-tag v-if="schedule.status === 'stopped'" type="info" size="small" class="status-tag">停诊</el-tag>
+                      </div>
                       <div class="schedule-info">
                         <span class="room">{{ schedule.roomNumber }}</span>
                         <span class="quota">余号: {{ schedule.remainingQuota }}</span>
@@ -77,6 +81,7 @@
                         link
                         @click="handleAdjustSchedule(schedule)"
                         title="调班"
+                        :disabled="schedule.status === 'stopped'"
                       >
                         调班
                       </el-button>
@@ -85,9 +90,10 @@
                         size="small"
                         link
                         @click="handleDeleteSchedule(schedule)"
-                        title="删除排班"
+                        title="设置停诊"
+                        :disabled="schedule.status === 'stopped'"
                       >
-                        删除
+                        停诊
                       </el-button>
                     </div>
                   </div>
@@ -409,6 +415,7 @@ interface ScheduleDetail {
   roomNumber: string;
   remainingQuota: number;
   templateId?: string; // 添加 template_id 字段，用于调班等操作
+  status: 'normal' | 'stopped'; // 排班状态：normal-正常，stopped-停诊
 }
 
 
@@ -704,7 +711,8 @@ const handleQueryByWeek = async () => {
               doctorTitle: schedule.doctor_title || '医师',  // 默认职称
               roomNumber: schedule.room_number || '待定',  // 默认诊室
               remainingQuota: schedule.available_slots || 0,
-              templateId: schedule.schedule_time_id || ''  // 保存 template_id
+              templateId: schedule.schedule_time_id || '',  // 保存 template_id
+              status: schedule.status === 'stopped' ? 'stopped' : 'normal'  // 设置状态
             })
           })
         }
@@ -767,7 +775,8 @@ const handleQuery = async () => {
               doctorTitle: schedule.title || '医师',
               roomNumber: schedule.room_number || '待定', // 如果没有诊室信息
               remainingQuota: parseInt(schedule.left_source_count) || 0,
-              templateId: schedule.template_id || ''  // 保存 template_id
+              templateId: schedule.template_id || '',  // 保存 template_id
+              status: schedule.status === 'stopped' ? 'stopped' : 'normal'  // 设置状态
             })
           })
         }
@@ -1040,14 +1049,17 @@ const handleDeleteSchedule = async (schedule: ScheduleDetail) => {
       }
     )
 
-    // 调用删除 API
+    // 调用停诊 API
     loading.value = true
     await deleteSchedule({schedule_id: schedule.id, reason: reason})
 
-    ElMessage.success('删除排班成功！')
+    ElMessage.success('设置停诊成功！')
 
-    // 从本地数据中移除该排班
-    scheduleDetails.value = scheduleDetails.value.filter(s => s.id !== schedule.id)
+    // 更新本地排班状态为停诊，而不是删除
+    const targetSchedule = scheduleDetails.value.find(s => s.id === schedule.id)
+    if (targetSchedule) {
+      targetSchedule.status = 'stopped'
+    }
 
   } catch (error) {
     if (error === 'cancel') {
@@ -1250,6 +1262,16 @@ const getMockAdjustmentRequests = (): AdjustmentRequest[] => {
 .doctor-schedule-card.clickable:hover .card-actions {
   opacity: 1;
 }
+.doctor-schedule-card.stopped {
+  background-color: #f4f4f5;
+  opacity: 0.8;
+}
+.doctor-schedule-card.stopped:hover {
+  background-color: #f4f4f5;
+  border-color: #e4e7ed;
+  transform: none;
+  box-shadow: none;
+}
 .card-content {
   margin-bottom: 4px;
 }
@@ -1267,6 +1289,12 @@ const getMockAdjustmentRequests = (): AdjustmentRequest[] => {
 .doctor-name {
   font-weight: bold;
   font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.status-tag {
+  margin-left: 4px;
 }
 .doctor-title {
   font-size: 12px;
