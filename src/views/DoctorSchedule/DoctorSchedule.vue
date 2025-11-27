@@ -98,6 +98,110 @@
               </template>
             </el-table-column>
           </el-table>
+
+          <!-- 批量停诊表单区域 -->
+          <el-divider content-position="left" class="batch-stop-divider">批量停诊设置</el-divider>
+          <el-card class="batch-stop-card" shadow="never">
+            <el-form :model="batchStopForm" ref="batchStopFormRef" label-width="120px" :rules="batchStopRules">
+              <el-row :gutter="20">
+                <el-col :span="24">
+                  <el-form-item label="选择医生" prop="doctorIds" required>
+                    <el-select
+                      v-model="batchStopForm.doctorIds"
+                      multiple
+                      placeholder="请选择需要停诊的医生"
+                      filterable
+                      style="width: 100%"
+                    >
+                      <el-option
+                        v-for="doc in doctorOptions"
+                        :key="doc.userId"
+                        :label="`${doc.userName} (${doc.doctorSpeciality})`"
+                        :value="doc.userId"
+                      >
+                      </el-option>
+                    </el-select>
+                  </el-form-item>
+                </el-col>
+              </el-row>
+
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="起始时段" required>
+                    <el-row :gutter="10">
+                      <el-col :span="14">
+                        <el-form-item prop="startDate" style="margin-bottom: 0">
+                          <el-date-picker
+                            v-model="batchStopForm.startDate"
+                            type="date"
+                            placeholder="选择开始日期"
+                            value-format="YYYY-MM-DD"
+                            style="width: 100%"
+                          />
+                        </el-form-item>
+                      </el-col>
+                      <el-col :span="10">
+                        <el-form-item prop="startTimeSlot" style="margin-bottom: 0">
+                          <el-select v-model="batchStopForm.startTimeSlot" placeholder="选择时段" style="width: 100%">
+                            <el-option label="上午" value="TIME0001"></el-option>
+                            <el-option label="下午" value="TIME0002"></el-option>
+                          </el-select>
+                        </el-form-item>
+                      </el-col>
+                    </el-row>
+                  </el-form-item>
+                </el-col>
+
+                <el-col :span="12">
+                  <el-form-item label="终止时段" required>
+                    <el-row :gutter="10">
+                      <el-col :span="14">
+                        <el-form-item prop="endDate" style="margin-bottom: 0">
+                          <el-date-picker
+                            v-model="batchStopForm.endDate"
+                            type="date"
+                            placeholder="选择结束日期"
+                            value-format="YYYY-MM-DD"
+                            style="width: 100%"
+                          />
+                        </el-form-item>
+                      </el-col>
+                      <el-col :span="10">
+                        <el-form-item prop="endTimeSlot" style="margin-bottom: 0">
+                          <el-select v-model="batchStopForm.endTimeSlot" placeholder="选择时段" style="width: 100%">
+                            <el-option label="上午" value="TIME0001"></el-option>
+                            <el-option label="下午" value="TIME0002"></el-option>
+                          </el-select>
+                        </el-form-item>
+                      </el-col>
+                    </el-row>
+                  </el-form-item>
+                </el-col>
+              </el-row>
+
+              <el-row>
+                <el-col :span="24">
+                  <el-form-item label="停诊原因" prop="reason" required>
+                    <el-input
+                      v-model="batchStopForm.reason"
+                      type="textarea"
+                      :rows="3"
+                      placeholder="请输入批量停诊的原因"
+                      maxlength="200"
+                      show-word-limit
+                    />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+
+              <el-form-item>
+                <el-button type="primary" @click="handleBatchStop" :loading="batchStopLoading">
+                  批量设置停诊
+                </el-button>
+                <el-button @click="resetBatchStopForm">重置</el-button>
+              </el-form-item>
+            </el-form>
+          </el-card>
         </div>
         <el-empty v-else-if="!loading" description="请选择查询条件并点击查询"></el-empty>
       </el-tab-pane>
@@ -271,7 +375,7 @@ import { ElMessage,ElMessageBox } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 // 导入你的 API 函数
 // @ts-ignore
-import { getSchedulesHistory, getSchedules, createNextWeekSchedule, deleteSchedule } from './api/scheduleApi.js'
+import { getSchedulesHistory, getSchedules, createNextWeekSchedule, deleteSchedule, stopBatchSchedule } from './api/scheduleApi.js'
 // import { getDoctorSchedule, addSchedule } from './api/scheduleApi.js'
 // import { getDepartmentOptions } from '@/views/DoctorQuery/api/doctorApi.js'
 // import { getDoctorListWithFilter } from '@/views/DoctorQuery/api/doctorApi.js'
@@ -423,6 +527,35 @@ const adjustForm = reactive({
 // --- 调班审批状态 ---
 const requestsLoading = ref(false)
 const adjustmentRequests = ref<AdjustmentRequest[]>([])
+
+// --- 批量停诊状态 ---
+const batchStopFormRef = ref<FormInstance>()
+const batchStopLoading = ref(false)
+const batchStopForm = reactive({
+  doctorIds: [] as string[],
+  startDate: '',
+  startTimeSlot: 'TIME0001',
+  endDate: '',
+  endTimeSlot: 'TIME0001',
+  reason: ''
+})
+
+// 批量停诊表单验证规则
+const batchStopRules = {
+  doctorIds: [
+    { required: true, message: '请至少选择一位医生', trigger: 'change', type: 'array', min: 1 }
+  ],
+  startDate: [
+    { required: true, message: '请选择开始日期', trigger: 'change' }
+  ],
+  endDate: [
+    { required: true, message: '请选择结束日期', trigger: 'change' }
+  ],
+  reason: [
+    { required: true, message: '请输入停诊原因', trigger: 'blur' },
+    { min: 2, max: 200, message: '停诊原因长度在 2 到 200 个字符', trigger: 'blur' }
+  ]
+}
 
 // --- 生命周期函数 ---
 onMounted(() => {
@@ -915,6 +1048,127 @@ const handleDeleteSchedule = async (schedule: ScheduleDetail) => {
 
 
 
+// --- 批量停诊相关方法 ---
+const handleBatchStop = async () => {
+  if (!batchStopFormRef.value) return
+
+  try {
+    // 验证表单
+    await batchStopFormRef.value.validate()
+
+    // 验证日期范围
+    if (batchStopForm.startDate && batchStopForm.endDate) {
+      const startDateTime = new Date(batchStopForm.startDate).getTime()
+      const endDateTime = new Date(batchStopForm.endDate).getTime()
+
+      if (startDateTime > endDateTime) {
+        ElMessage.warning('开始日期不能晚于结束日期')
+        return
+      }
+
+      // 如果日期相同，检查时段
+      if (startDateTime === endDateTime) {
+        if (batchStopForm.startTimeSlot === 'TIME0002' && batchStopForm.endTimeSlot === 'TIME0001') {
+          ElMessage.warning('同一天时，开始时段不能晚于结束时段')
+          return
+        }
+      }
+    }
+
+    // 获取选中医生的名字列表
+    const selectedDoctorNames = batchStopForm.doctorIds
+      .map(id => {
+        const doctor = doctorOptions.value.find(doc => doc.userId === id)
+        return doctor ? doctor.userName : ''
+      })
+      .filter(name => name)
+
+    // 构造确认消息
+    const doctorListHtml = selectedDoctorNames.length <= 5
+      ? selectedDoctorNames.map(name => `<li>${name}</li>`).join('')
+      : selectedDoctorNames.slice(0, 5).map(name => `<li>${name}</li>`).join('') +
+        `<li>... 等共 ${selectedDoctorNames.length} 位医生</li>`
+
+    const confirmMessage = `
+      <div style="text-align: left;">
+        <p><b>将为以下医生设置停诊：</b></p>
+        <ul style="margin: 10px 0; padding-left: 20px;">
+          ${doctorListHtml}
+        </ul>
+        <p><b>停诊时段：</b></p>
+        <p style="margin-left: 20px;">
+          从 ${batchStopForm.startDate} ${batchStopForm.startTimeSlot === 'TIME0001' ? '上午' : '下午'}
+          到 ${batchStopForm.endDate} ${batchStopForm.endTimeSlot === 'TIME0001' ? '上午' : '下午'}
+        </p>
+        <p style="margin-top: 15px;">是否确认继续？</p>
+      </div>
+    `
+
+    // 确认操作
+    await ElMessageBox.confirm(
+      confirmMessage,
+      '批量停诊确认',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+        dangerouslyUseHTMLString: true
+      }
+    )
+
+    batchStopLoading.value = true
+
+    // 构造请求数据
+    const requestData = {
+      doc_ids: batchStopForm.doctorIds,
+      start_time: {
+        date: batchStopForm.startDate,
+        template_id: batchStopForm.startTimeSlot
+      },
+      end_time: {
+        date: batchStopForm.endDate,
+        template_id: batchStopForm.endTimeSlot
+      },
+      reason: batchStopForm.reason
+    }
+
+    console.log('批量停诊请求数据:', requestData)
+
+    // 调用API
+    await stopBatchSchedule(requestData)
+
+    ElMessage.success('批量停诊设置成功！')
+
+    // 重置表单
+    resetBatchStopForm()
+
+    // 重新查询排班数据
+    handleQueryClick()
+
+  } catch (error) {
+    if (error === 'cancel') {
+      ElMessage.info('已取消批量停诊操作')
+    } else {
+      console.error('批量停诊失败:', error)
+      ElMessage.error('批量停诊设置失败，请重试')
+    }
+  } finally {
+    batchStopLoading.value = false
+  }
+}
+
+const resetBatchStopForm = () => {
+  if (batchStopFormRef.value) {
+    batchStopFormRef.value.resetFields()
+  }
+  batchStopForm.doctorIds = []
+  batchStopForm.startDate = ''
+  batchStopForm.startTimeSlot = 'TIME0001'
+  batchStopForm.endDate = ''
+  batchStopForm.endTimeSlot = 'TIME0001'
+  batchStopForm.reason = ''
+}
+
 const getMockScheduleData = (departmentId: string): ScheduleDetail[] => {
   console.log('根据科室ID模拟数据:', departmentId)
   return [
@@ -1055,5 +1309,20 @@ const getMockAdjustmentRequests = (): AdjustmentRequest[] => {
 
 .schedule-item:last-child {
   margin-bottom: 0;
+}
+
+/* 批量停诊样式 */
+.batch-stop-divider {
+  margin-top: 30px;
+  margin-bottom: 20px;
+}
+
+.batch-stop-card {
+  border: 1px solid #e4e7ed;
+  background-color: #f9fafc;
+}
+
+.batch-stop-card :deep(.el-card__body) {
+  padding: 20px;
 }
 </style>
