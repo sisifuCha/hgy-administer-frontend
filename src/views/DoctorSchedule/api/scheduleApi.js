@@ -126,8 +126,8 @@ export const deleteSchedule = (data) => {
  * @description 批量设置排班为停诊
  * @param {Object} data - 批量停诊数据
  * @param {Array<string>} data.doc_ids - 医生ID数组
- * @param {Object} data.start_time - 开始时间 {date: 'YYYY-MM-DD', time_slot: 'TEMPLATE001'}
- * @param {Object} data.end_time - 结束时间 {date: 'YYYY-MM-DD', time_slot: 'TEMPLATE001'}
+ * @param {Object} data.start_time - 开始时间 {date: 'YYYY-MM-DD', template_id: 'TIME0001'}
+ * @param {Object} data.end_time - 结束时间 {date: 'YYYY-MM-DD', template_id: 'TIME0002'}
  * @param {string} data.reason - 批量处理的原由
  * @returns {Promise<void>}
  */
