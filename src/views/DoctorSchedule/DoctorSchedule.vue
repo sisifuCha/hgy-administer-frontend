@@ -1042,7 +1042,7 @@ const handleDeleteSchedule = async (schedule: ScheduleDetail) => {
 
     // 调用删除 API
     loading.value = true
-    await deleteSchedule({scheduleId:schedule.id, reason:reason})
+    await deleteSchedule({schedule_id: schedule.id, reason: reason})
 
     ElMessage.success('删除排班成功！')
 

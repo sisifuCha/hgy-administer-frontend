@@ -114,12 +114,14 @@ export const createNextWeekSchedule = (scheduleData, week) => {
 }
 
 /**
- * @description 删除排班
- * @param {string} scheduleId - 排班ID
+ * @description 删除排班（停诊单个排班）
+ * @param {Object} params - 查询参数
+ * @param {string} params.schedule_id - 要删除的排班记录ID
+ * @param {string} params.reason - 停班的原因
  * @returns {Promise<void>}
  */
-export const deleteSchedule = (data) => {
-  return api.post(`/admin/stopSingle/Schedule`,data)
+export const deleteSchedule = (params) => {
+  return api.post(`/admin/stopSingle/Schedule`, {}, { params })
 }
 
 /**
