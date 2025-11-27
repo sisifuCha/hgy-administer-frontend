@@ -151,3 +151,17 @@ export const stopBatchSchedule = (data) => {
 export const submitScheduleChangeRequest = (data) => {
   return api.post('/doctor/schedule_change_request', data)
 }
+
+/**
+ * @description 批量延后排班
+ * @param {Object} data - 批量延后数据
+ * @param {Array<string>} data.doc_ids - 医生ID数组（必填）
+ * @param {number} data.delay_days - 延后天数（必填）
+ * @param {string} data.start_date - 开始日期（必填，格式：YYYY-MM-DD）
+ * @param {string} data.end_date - 结束日期（必填，格式：YYYY-MM-DD）
+ * @param {string} data.reason - 延后原因（必填）
+ * @returns {Promise<void>}
+ */
+export const batchDelaySchedule = (data) => {
+  return api.post('/admin/batchDelay', data)
+}
