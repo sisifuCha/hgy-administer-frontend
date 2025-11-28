@@ -149,8 +149,12 @@
                       <el-col :span="10">
                         <el-form-item prop="startTimeSlot" style="margin-bottom: 0">
                           <el-select v-model="batchStopForm.startTimeSlot" placeholder="选择时段" style="width: 100%">
-                            <el-option label="上午" value="TIME0001"></el-option>
-                            <el-option label="下午" value="TIME0002"></el-option>
+                            <el-option
+                              v-for="slot in availableTimeSlots"
+                              :key="slot.value"
+                              :label="slot.label"
+                              :value="slot.value"
+                            ></el-option>
                           </el-select>
                         </el-form-item>
                       </el-col>
@@ -175,8 +179,12 @@
                       <el-col :span="10">
                         <el-form-item prop="endTimeSlot" style="margin-bottom: 0">
                           <el-select v-model="batchStopForm.endTimeSlot" placeholder="选择时段" style="width: 100%">
-                            <el-option label="上午" value="TIME0001"></el-option>
-                            <el-option label="下午" value="TIME0002"></el-option>
+                            <el-option
+                              v-for="slot in availableTimeSlots"
+                              :key="slot.value"
+                              :label="slot.label"
+                              :value="slot.value"
+                            ></el-option>
                           </el-select>
                         </el-form-item>
                       </el-col>
@@ -328,8 +336,12 @@
                 <el-col :span="10">
                   <el-form-item prop="startTimeSlot" style="margin-bottom: 0">
                     <el-select v-model="batchDelayForm.startTimeSlot" placeholder="选择时段" style="width: 100%">
-                      <el-option label="上午" value="TIME0001"></el-option>
-                      <el-option label="下午" value="TIME0002"></el-option>
+                      <el-option
+                        v-for="slot in availableTimeSlots"
+                        :key="slot.value"
+                        :label="slot.label"
+                        :value="slot.value"
+                      ></el-option>
                     </el-select>
                   </el-form-item>
                 </el-col>
@@ -352,8 +364,12 @@
                 <el-col :span="10">
                   <el-form-item prop="endTimeSlot" style="margin-bottom: 0">
                     <el-select v-model="batchDelayForm.endTimeSlot" placeholder="选择时段" style="width: 100%">
-                      <el-option label="上午" value="TIME0001"></el-option>
-                      <el-option label="下午" value="TIME0002"></el-option>
+                      <el-option
+                        v-for="slot in availableTimeSlots"
+                        :key="slot.value"
+                        :label="slot.label"
+                        :value="slot.value"
+                      ></el-option>
                     </el-select>
                   </el-form-item>
                 </el-col>
@@ -682,6 +698,37 @@ const weekDays = computed(() => {
     })
   }
   return days
+})
+
+// 从查询结果中提取可用的时段选项
+const availableTimeSlots = computed(() => {
+  // 从 scheduleDetails 中提取所有唯一的 templateId
+  const uniqueTemplateIds = new Set<string>()
+
+  scheduleDetails.value.forEach(schedule => {
+    if (schedule.templateId) {
+      uniqueTemplateIds.add(schedule.templateId)
+    }
+  })
+
+  // 如果没有查询数据，返回默认选项
+  if (uniqueTemplateIds.size === 0) {
+    return [
+      { label: '上午', value: 'TIME0001' },
+      { label: '下午', value: 'TIME0002' }
+    ]
+  }
+
+  // 根据 templateId 生成选项列表
+  const options = Array.from(uniqueTemplateIds).map(templateId => ({
+    label: timeSlotMap[templateId] || templateId,
+    value: templateId
+  }))
+
+  // 按 templateId 排序
+  options.sort((a, b) => a.value.localeCompare(b.value))
+
+  return options
 })
 
 // ==================== 状态管理 ====================
