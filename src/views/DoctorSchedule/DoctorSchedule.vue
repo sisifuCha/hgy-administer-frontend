@@ -839,12 +839,19 @@ const handleQueryByWeek = async () => {
             // 调试：打印原始数据以检查医生ID字段
             console.log('周次查询 - 原始排班数据:', schedule)
 
+            // 通过医生姓名从 doctorOptions 中查找对应的 userId
+            const doctorName = schedule.doctor_name || schedule.doc_name || ''
+            const matchedDoctor = doctorOptions.value.find(doc => doc.userName === doctorName)
+            const doctorId = matchedDoctor?.userId || schedule.doctor_id || schedule.doc_id || schedule.doctorId || ''
+
+            console.log(`医生姓名: ${doctorName}, 匹配到的userId: ${doctorId}`)
+
             convertedData.push({
               id: schedule.schedule_id || '',
               timeSlot: timeSlotMap[schedule.schedule_time_id] || '未知',
               dayIndex: dayIndex,
-              doctorId: schedule.doctor_id || schedule.doc_id || schedule.doctorId || '',  // 多种可能的字段名
-              doctorName: schedule.doctor_name || schedule.doc_name || `医生${schedule.doctor_id}`,
+              doctorId: doctorId,  // 使用匹配到的 userId
+              doctorName: doctorName || `医生${schedule.doctor_id}`,
               doctorTitle: schedule.doctor_title || '医师',
               roomNumber: schedule.room_number || '待定',
               remainingQuota: schedule.available_slots || 0,
@@ -907,12 +914,19 @@ const handleQuery = async () => {
             // 调试：打印原始数据以检查医生ID字段
             console.log('历史查询 - 原始排班数据:', schedule)
 
+            // 通过医生姓名从 doctorOptions 中查找对应的 userId
+            const doctorName = schedule.doc_name || schedule.doctor_name || ''
+            const matchedDoctor = doctorOptions.value.find(doc => doc.userName === doctorName)
+            const doctorId = matchedDoctor?.userId || schedule.doctor_id || schedule.doc_id || schedule.doctorId || ''
+
+            console.log(`医生姓名: ${doctorName}, 匹配到的userId: ${doctorId}`)
+
             convertedData.push({
               id: schedule.schedule_id || `${dayKey}_${schedule.template_id}`,
               timeSlot: timeSlotMap[schedule.template_id] || '未知',
               dayIndex: dayIndex,
-              doctorId: schedule.doctor_id || schedule.doc_id || schedule.doctorId || '',  // 多种可能的字段名
-              doctorName: schedule.doc_name || schedule.doctor_name || '未知医生',
+              doctorId: doctorId,  // 使用匹配到的 userId
+              doctorName: doctorName || '未知医生',
               doctorTitle: schedule.title || schedule.doctor_title || '医师',
               roomNumber: schedule.room_number || '待定',
               remainingQuota: parseInt(schedule.left_source_count) || 0,
