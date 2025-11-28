@@ -515,8 +515,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed,watch } from 'vue'
-import stopScheduleDialog from './stopScheduleDialog.vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage,ElMessageBox } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 // 导入你的 API 函数
