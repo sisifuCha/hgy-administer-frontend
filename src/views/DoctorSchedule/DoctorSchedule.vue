@@ -62,9 +62,13 @@
                     v-for="schedule in getScheduleByTimeAndDay(scope.row.timeSlot, index)"
                     :key="schedule.id"
                     class="doctor-schedule-card clickable"
+                    :class="{ 'stopped': schedule.status === 'stopped' }"
                   >
                     <div class="card-content">
-                      <div class="doctor-name">{{ schedule.doctorName }} ({{ schedule.doctorTitle }})</div>
+                      <div class="doctor-name">
+                        {{ schedule.doctorName }} ({{ schedule.doctorTitle }})
+                        <el-tag v-if="schedule.status === 'stopped'" type="info" size="small" class="status-tag">停诊</el-tag>
+                      </div>
                       <div class="schedule-info">
                         <span class="room">{{ schedule.roomNumber }}</span>
                         <span class="quota">余号: {{ schedule.remainingQuota }}</span>
@@ -77,6 +81,7 @@
                         link
                         @click="handleAdjustSchedule(schedule)"
                         title="调班"
+                        :disabled="schedule.status === 'stopped'"
                       >
                         调班
                       </el-button>
@@ -85,9 +90,10 @@
                         size="small"
                         link
                         @click="handleDeleteSchedule(schedule)"
-                        title="删除排班"
+                        title="设置停诊"
+                        :disabled="schedule.status === 'stopped'"
                       >
-                        删除
+                        停诊
                       </el-button>
                     </div>
                   </div>
@@ -408,6 +414,8 @@ interface ScheduleDetail {
   doctorTitle: string;
   roomNumber: string;
   remainingQuota: number;
+  templateId?: string; // 添加 template_id 字段，用于调班等操作
+  status: 'normal' | 'stopped'; // 排班状态：normal-正常，stopped-停诊
 }
 
 
@@ -587,9 +595,44 @@ onMounted(() => {
   ]
   // 使用模拟数据
   doctorOptions.value = [
-    { userId: '3', userName: '李明喜', doctorSpeciality: '泌尿外科' },
-    { userId: '4', userName: '刘炳岩', doctorSpeciality: '泌尿外科' },
-    { userId: '5', userName: '王崇慧', doctorSpeciality: '泌尿外科' },
+    { userId: 'DOC0004', userName: '王崇慧', doctorSpeciality: '泌尿外科' },
+    { userId: 'DOC0006', userName: '刘炳岩', doctorSpeciality: '泌尿外科' },
+    { userId: 'DOC0007', userName: '严肃', doctorSpeciality: '泌尿外科' },
+    {userId:'DOC0008',userName:'乔逸',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0026',userName:'冷俊胜',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0040',userName:'刘广华',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0055',userName:'叶子兴',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0059',userName:'吴兴成',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0070',userName:'周敏敏',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0071',userName:'周敬敏',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0072',userName:'周智恩',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0097',userName:'左宇志',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0116',userName:'张学斌',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0125',userName:'张玉石',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0132',userName:'张震宇',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0143',userName:'徐维锋',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0150',userName:'文进',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0164',userName:'李宏军',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0172',userName:'李永强',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0196',userName:'毛全宗',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0215',userName:'王文达',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0218',userName:'王栋',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0239',userName:'石维坤',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0245',userName:'纪志刚',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0256',userName:'肖河',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0262',userName:'范欣荣',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0264',userName:'荣石',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0267',userName:'董德鑫',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0277',userName:'谢燚',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0283',userName:'赵奕',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0286',userName:'赵扬',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0292',userName:'连鹏鹄',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0294',userName:'邓建华',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0305',userName:'郑国洋',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0354',userName:'马琳',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0362',userName:'魏梦超',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0365',userName:'黄厚锋',doctorSpeciality:'泌尿外科'},
+    {userId:'DOC0367',userName:'黄钟明',doctorSpeciality:'泌尿外科'},
     { userId: '6', userName: '朱燕林', doctorSpeciality: '妇产科' }
   ]
   adjustmentRequests.value = getMockAdjustmentRequests()
@@ -702,7 +745,9 @@ const handleQueryByWeek = async () => {
               doctorName: schedule.doctor_name || `医生${schedule.doctor_id}`,  // 暂时使用 doctor_id
               doctorTitle: schedule.doctor_title || '医师',  // 默认职称
               roomNumber: schedule.room_number || '待定',  // 默认诊室
-              remainingQuota: schedule.available_slots || 0
+              remainingQuota: schedule.available_slots || 0,
+              templateId: schedule.schedule_time_id || '',  // 保存 template_id
+              status: schedule.status === 'stopped' ? 'stopped' : 'normal'  // 设置状态
             })
           })
         }
@@ -758,13 +803,15 @@ const handleQuery = async () => {
         if (Array.isArray(daySchedules)) {
           daySchedules.forEach((schedule: any) => {
             convertedData.push({
-              id: schedule.id || `${dayKey}_${schedule.template_id}`, // 如果没有id，生成一个
+              id: schedule.schedule_id || `${dayKey}_${schedule.template_id}`, // 使用真实的 schedule_id 字段
               timeSlot: timeSlotMap[schedule.template_id] || '未知',
               dayIndex: dayIndex,
               doctorName: schedule.doc_name || '未知医生',
               doctorTitle: schedule.title || '医师',
               roomNumber: schedule.room_number || '待定', // 如果没有诊室信息
-              remainingQuota: parseInt(schedule.left_source_count) || 0
+              remainingQuota: parseInt(schedule.left_source_count) || 0,
+              templateId: schedule.template_id || '',  // 保存 template_id
+              status: schedule.status === 'stopped' ? 'stopped' : 'normal'  // 设置状态
             })
           })
         }
@@ -985,6 +1032,7 @@ const handleReject = async (requestId: string) => {
 const handleAdjustSchedule = (schedule: ScheduleDetail) => {
   console.log('🔄 调班操作 - 选中的排班信息:', {
     排班ID: schedule.id,
+    模板ID: schedule.templateId,
     医生姓名: schedule.doctorName,
     医生职称: schedule.doctorTitle,
     时间段: schedule.timeSlot,
@@ -994,11 +1042,23 @@ const handleAdjustSchedule = (schedule: ScheduleDetail) => {
   })
   ElMessage.info(`正在调班：${schedule.doctorName} - ${schedule.timeSlot}`)
   // TODO: 后续可以在这里打开调班对话框或跳转到调班表单
+  // 调班请求应该使用 schedule.id (真实的 schedule_id) 和 schedule.templateId
+  // 例如：
+  // const adjustmentData = {
+  //   changeType: 0,
+  //   doctorId: "",
+  //   originalScheduleId: schedule.id,  // 使用真实的 schedule_id
+  //   templateId: schedule.templateId,   // 使用真实的 template_id
+  //   reason: "调班理由",
+  //   targetDate: "2025-11-28",
+  //   targetTimePeriod: 2
+  // }
 }
 
 const handleDeleteSchedule = async (schedule: ScheduleDetail) => {
   console.log('删除排班操作 - 选中的排班信息:', {
     排班ID: schedule.id,
+    模板ID: schedule.templateId,
     医生姓名: schedule.doctorName,
     医生职称: schedule.doctorTitle,
     时间段: schedule.timeSlot,
@@ -1024,14 +1084,17 @@ const handleDeleteSchedule = async (schedule: ScheduleDetail) => {
       }
     )
 
-    // 调用删除 API
+    // 调用停诊 API
     loading.value = true
-    await deleteSchedule({scheduleId:schedule.id, reason:reason})
+    await deleteSchedule({schedule_id: schedule.id, reason: reason})
 
-    ElMessage.success('删除排班成功！')
+    ElMessage.success('设置停诊成功！')
 
-    // 从本地数据中移除该排班
-    scheduleDetails.value = scheduleDetails.value.filter(s => s.id !== schedule.id)
+    // 更新本地排班状态为停诊，而不是删除
+    const targetSchedule = scheduleDetails.value.find(s => s.id === schedule.id)
+    if (targetSchedule) {
+      targetSchedule.status = 'stopped'
+    }
 
   } catch (error) {
     if (error === 'cancel') {
@@ -1234,6 +1297,16 @@ const getMockAdjustmentRequests = (): AdjustmentRequest[] => {
 .doctor-schedule-card.clickable:hover .card-actions {
   opacity: 1;
 }
+.doctor-schedule-card.stopped {
+  background-color: #f4f4f5;
+  opacity: 0.8;
+}
+.doctor-schedule-card.stopped:hover {
+  background-color: #f4f4f5;
+  border-color: #e4e7ed;
+  transform: none;
+  box-shadow: none;
+}
 .card-content {
   margin-bottom: 4px;
 }
@@ -1251,6 +1324,12 @@ const getMockAdjustmentRequests = (): AdjustmentRequest[] => {
 .doctor-name {
   font-weight: bold;
   font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.status-tag {
+  margin-left: 4px;
 }
 .doctor-title {
   font-size: 12px;
