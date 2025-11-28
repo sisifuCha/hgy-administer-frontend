@@ -312,24 +312,52 @@
               </div>
             </el-form-item>
 
-            <el-form-item label="开始日期" prop="startDate" required>
-              <el-date-picker
-                v-model="batchDelayForm.startDate"
-                type="date"
-                placeholder="选择开始日期"
-                value-format="YYYY-MM-DD"
-                style="width: 100%"
-              />
+            <el-form-item label="起始时段" required>
+              <el-row :gutter="10">
+                <el-col :span="14">
+                  <el-form-item prop="startDate" style="margin-bottom: 0">
+                    <el-date-picker
+                      v-model="batchDelayForm.startDate"
+                      type="date"
+                      placeholder="选择开始日期"
+                      value-format="YYYY-MM-DD"
+                      style="width: 100%"
+                    />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="10">
+                  <el-form-item prop="startTimeSlot" style="margin-bottom: 0">
+                    <el-select v-model="batchDelayForm.startTimeSlot" placeholder="选择时段" style="width: 100%">
+                      <el-option label="上午" value="TIME0001"></el-option>
+                      <el-option label="下午" value="TIME0002"></el-option>
+                    </el-select>
+                  </el-form-item>
+                </el-col>
+              </el-row>
             </el-form-item>
 
-            <el-form-item label="结束日期" prop="endDate" required>
-              <el-date-picker
-                v-model="batchDelayForm.endDate"
-                type="date"
-                placeholder="选择结束日期"
-                value-format="YYYY-MM-DD"
-                style="width: 100%"
-              />
+            <el-form-item label="终止时段" required>
+              <el-row :gutter="10">
+                <el-col :span="14">
+                  <el-form-item prop="endDate" style="margin-bottom: 0">
+                    <el-date-picker
+                      v-model="batchDelayForm.endDate"
+                      type="date"
+                      placeholder="选择结束日期"
+                      value-format="YYYY-MM-DD"
+                      style="width: 100%"
+                    />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="10">
+                  <el-form-item prop="endTimeSlot" style="margin-bottom: 0">
+                    <el-select v-model="batchDelayForm.endTimeSlot" placeholder="选择时段" style="width: 100%">
+                      <el-option label="上午" value="TIME0001"></el-option>
+                      <el-option label="下午" value="TIME0002"></el-option>
+                    </el-select>
+                  </el-form-item>
+                </el-col>
+              </el-row>
             </el-form-item>
 
             <el-alert
@@ -664,7 +692,9 @@ const batchDelayForm = reactive({
   doctorIds: [] as string[],  // 医生ID数组
   delayDays: 1,               // 延后天数
   startDate: '',              // 开始日期
+  startTimeSlot: 'TIME0001',  // 开始时段
   endDate: '',                // 结束日期
+  endTimeSlot: 'TIME0001',    // 结束时段
   reason: ''                  // 延后原因
 })
 
@@ -732,8 +762,14 @@ const batchDelayRules = {
   startDate: [
     { required: true, message: '请选择开始日期', trigger: 'change' }
   ],
+  startTimeSlot: [
+    { required: true, message: '请选择开始时段', trigger: 'change' }
+  ],
   endDate: [
     { required: true, message: '请选择结束日期', trigger: 'change' }
+  ],
+  endTimeSlot: [
+    { required: true, message: '请选择结束时段', trigger: 'change' }
   ],
   reason: [
     { required: true, message: '请输入延后原因', trigger: 'blur' },
@@ -1163,6 +1199,14 @@ const handleBatchDelaySubmit = async () => {
         ElMessage.warning('开始日期不能晚于结束日期')
         return
       }
+
+      // 如果日期相同，检查时段
+      if (startDateTime === endDateTime) {
+        if (batchDelayForm.startTimeSlot === 'TIME0002' && batchDelayForm.endTimeSlot === 'TIME0001') {
+          ElMessage.warning('同一天时，开始时段不能晚于结束时段')
+          return
+        }
+      }
     }
 
     // 获取选中医生的名字列表
@@ -1179,6 +1223,11 @@ const handleBatchDelaySubmit = async () => {
       : selectedDoctorNames.slice(0, 5).map(name => `<li>${name}</li>`).join('') +
         `<li>... 等共 ${selectedDoctorNames.length} 位医生</li>`
 
+    const timeSlotMap = {
+      'TIME0001': '上午',
+      'TIME0002': '下午'
+    }
+
     const confirmMessage = `
       <div style="text-align: left;">
         <p><b>将为以下医生延后排班：</b></p>
@@ -1187,7 +1236,7 @@ const handleBatchDelaySubmit = async () => {
         </ul>
         <p><b>时间范围：</b></p>
         <p style="margin-left: 20px;">
-          从 ${batchDelayForm.startDate} 到 ${batchDelayForm.endDate}
+          从 ${batchDelayForm.startDate} ${timeSlotMap[batchDelayForm.startTimeSlot]} 到 ${batchDelayForm.endDate} ${timeSlotMap[batchDelayForm.endTimeSlot]}
         </p>
         <p><b>延后天数：</b> ${batchDelayForm.delayDays} 天</p>
         <p style="margin-top: 15px;">是否确认继续？</p>
@@ -1212,8 +1261,14 @@ const handleBatchDelaySubmit = async () => {
     const requestData = {
       doc_ids: batchDelayForm.doctorIds,
       delay_days: batchDelayForm.delayDays,
-      start_date: batchDelayForm.startDate,
-      end_date: batchDelayForm.endDate,
+      start_time: {
+        date: batchDelayForm.startDate,
+        template_id: batchDelayForm.startTimeSlot
+      },
+      end_time: {
+        date: batchDelayForm.endDate,
+        template_id: batchDelayForm.endTimeSlot
+      },
       reason: batchDelayForm.reason
     }
 
@@ -1250,7 +1305,9 @@ const resetBatchDelayForm = () => {
   batchDelayForm.doctorIds = []
   batchDelayForm.delayDays = 1
   batchDelayForm.startDate = ''
+  batchDelayForm.startTimeSlot = 'TIME0001'
   batchDelayForm.endDate = ''
+  batchDelayForm.endTimeSlot = 'TIME0001'
   batchDelayForm.reason = ''
 }
 
