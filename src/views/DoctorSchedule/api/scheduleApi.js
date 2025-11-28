@@ -136,3 +136,34 @@ export const deleteSchedule = (params) => {
 export const stopBatchSchedule = (data) => {
   return api.post('/admin/stopBatchSchedule', data)
 }
+
+/**
+ * @description 提交调班/请假申请（新接口）
+ * @param {Object} data - 调班申请数据
+ * @param {string} data.doctorId - 医生ID（必填）
+ * @param {string} data.originalScheduleId - 原班次ID（必填）
+ * @param {number} data.changeType - 调整类型（必填）：0-调班, 1-请假
+ * @param {string} [data.targetDate] - 目标日期（调班时必填，格式：YYYY-MM-DD）
+ * @param {number} [data.targetTimePeriod] - 目标时段编号（调班时必填）
+ * @param {string} [data.targetDoctorId] - 目标医生ID（调班时可选）
+ * @param {number} [data.daysOff] - 请假天数（请假时必填）
+ * @param {string} data.reason - 调整原因（必填）
+ * @returns {Promise<void>}
+ */
+export const submitScheduleChangeRequest = (data) => {
+  return api.post('/doctor/schedule_change_request', data)
+}
+
+/**
+ * @description 批量延后排班
+ * @param {Object} data - 批量延后数据
+ * @param {Array<string>} data.doc_ids - 医生ID数组（必填）
+ * @param {number} data.delay_days - 延后天数（必填）
+ * @param {string} data.start_date - 开始日期（必填，格式：YYYY-MM-DD）
+ * @param {string} data.end_date - 结束日期（必填，格式：YYYY-MM-DD）
+ * @param {string} data.reason - 延后原因（必填）
+ * @returns {Promise<void>}
+ */
+export const batchDelaySchedule = (data) => {
+  return api.post('/admin/batchDelay', data)
+}
