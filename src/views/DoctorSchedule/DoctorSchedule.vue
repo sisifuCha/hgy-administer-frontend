@@ -836,17 +836,20 @@ const handleQueryByWeek = async () => {
 
         if (Array.isArray(schedules)) {
           schedules.forEach((schedule: any) => {
+            // 调试：打印原始数据以检查医生ID字段
+            console.log('周次查询 - 原始排班数据:', schedule)
+
             convertedData.push({
               id: schedule.schedule_id || '',
               timeSlot: timeSlotMap[schedule.schedule_time_id] || '未知',
               dayIndex: dayIndex,
-              doctorId: schedule.doctor_id || '',  // 保存医生ID
-              doctorName: schedule.doctor_name || `医生${schedule.doctor_id}`,  // 暂时使用 doctor_id
-              doctorTitle: schedule.doctor_title || '医师',  // 默认职称
-              roomNumber: schedule.room_number || '待定',  // 默认诊室
+              doctorId: schedule.doctor_id || schedule.doc_id || schedule.doctorId || '',  // 多种可能的字段名
+              doctorName: schedule.doctor_name || schedule.doc_name || `医生${schedule.doctor_id}`,
+              doctorTitle: schedule.doctor_title || '医师',
+              roomNumber: schedule.room_number || '待定',
               remainingQuota: schedule.available_slots || 0,
-              templateId: schedule.schedule_time_id || '',  // 保存 template_id
-              status: schedule.status === 'stopped' ? 'stopped' : 'normal'  // 设置状态
+              templateId: schedule.schedule_time_id || '',
+              status: schedule.status === 'stopped' ? 'stopped' : 'normal'
             })
           })
         }
@@ -901,17 +904,20 @@ const handleQuery = async () => {
 
         if (Array.isArray(daySchedules)) {
           daySchedules.forEach((schedule: any) => {
+            // 调试：打印原始数据以检查医生ID字段
+            console.log('历史查询 - 原始排班数据:', schedule)
+
             convertedData.push({
-              id: schedule.schedule_id || `${dayKey}_${schedule.template_id}`, // 使用真实的 schedule_id 字段
+              id: schedule.schedule_id || `${dayKey}_${schedule.template_id}`,
               timeSlot: timeSlotMap[schedule.template_id] || '未知',
               dayIndex: dayIndex,
-              doctorId: schedule.doctor_id || schedule.doc_id || '',  // 保存医生ID
-              doctorName: schedule.doc_name || '未知医生',
-              doctorTitle: schedule.title || '医师',
-              roomNumber: schedule.room_number || '待定', // 如果没有诊室信息
+              doctorId: schedule.doctor_id || schedule.doc_id || schedule.doctorId || '',  // 多种可能的字段名
+              doctorName: schedule.doc_name || schedule.doctor_name || '未知医生',
+              doctorTitle: schedule.title || schedule.doctor_title || '医师',
+              roomNumber: schedule.room_number || '待定',
               remainingQuota: parseInt(schedule.left_source_count) || 0,
-              templateId: schedule.template_id || '',  // 保存 template_id
-              status: schedule.status === 'stopped' ? 'stopped' : 'normal'  // 设置状态
+              templateId: schedule.template_id || '',
+              status: schedule.status === 'stopped' ? 'stopped' : 'normal'
             })
           })
         }
@@ -1239,6 +1245,7 @@ const submitAdjustRequest = async () => {
 const handleAdjustSchedule = (schedule: ScheduleDetail) => {
   console.log('🔄 调班操作 - 选中的排班信息:', {
     排班ID: schedule.id,
+    医生ID: schedule.doctorId,  // 添加医生ID到日志
     模板ID: schedule.templateId,
     医生姓名: schedule.doctorName,
     医生职称: schedule.doctorTitle,
@@ -1254,6 +1261,8 @@ const handleAdjustSchedule = (schedule: ScheduleDetail) => {
     ...schedule,
     date: scheduleDate
   } as any
+
+  console.log('📋 当前排班完整信息:', currentAdjustSchedule.value)
 
   // 打开调班对话框
   adjustDialogVisible.value = true
