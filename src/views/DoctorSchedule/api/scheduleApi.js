@@ -125,6 +125,23 @@ export const deleteSchedule = (params) => {
 }
 
 /**
+ * @description 提交调班/请假申请
+ * @param {Object} data - 调班请求数据
+ * @param {string} data.docId - 医生ID
+ * @param {string} data.originalTime - 原始时间，格式: ${date}_${timePeriod}，例如: "2025-11-11_2"
+ * @param {number} data.changeType - 变更类型：0-调班，1-请假
+ * @param {string} data.targetDate - 目标日期 (ISO格式: YYYY-MM-DD)
+ * @param {number} data.timePeriod - 时段（整数）
+ * @param {string} [data.targetDoctorId] - 目标医生ID（调班时使用）
+ * @param {number} [data.leaveTimeLength] - 请假时长（请假时使用）
+ * @param {string} data.reason - 原因说明
+ * @returns {Promise<void>}
+ */
+export const submitScheduleChangeRequest = (data) => {
+  return api.post('/doctor/schedule_change_request', data)
+}
+
+/**
  * @description 批量设置排班为停诊
  * @param {Object} data - 批量停诊数据
  * @param {Array<string>} data.doc_ids - 医生ID数组
