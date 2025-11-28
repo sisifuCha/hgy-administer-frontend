@@ -847,16 +847,6 @@ onMounted(() => {
   ]
   adjustmentRequests.value = getMockAdjustmentRequests()
 })
-// ==================== 监听器 ====================
-// 监听调班申请的医生选择，以动态加载其排班
-watch(() => adjustForm.sourceDoctorId, (newDoctorId) => {
-  if (newDoctorId) {
-    onSourceDoctorChange(newDoctorId)
-  } else {
-    sourceSchedules.value = []
-    adjustForm.sourceScheduleId = ''
-  }
-})
 
 // --- 方法 ---
 const fetchInitialData = async () => {
