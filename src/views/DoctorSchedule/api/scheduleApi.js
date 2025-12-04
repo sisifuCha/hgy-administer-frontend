@@ -211,16 +211,5 @@ export const batchDelaySchedule = (data) => {
  * }
  */
 export const getShiftRequests = (params) => {
-  // 获取 token
-  const token = localStorage.getItem('token')
-
-  // 使用直接的 axios 调用，与 submitScheduleChangeRequest 保持一致
-  return axios.get('http://localhost:8080/admin/shift-requests', {
-    params,
-    withCredentials: true,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` })
-    }
-  }).then(response => response.data)
+  return api.get('/admin/shift-requests', params)
 }
