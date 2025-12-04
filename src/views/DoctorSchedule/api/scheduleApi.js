@@ -213,3 +213,13 @@ export const batchDelaySchedule = (data) => {
 export const getShiftRequests = (params) => {
   return api.get('/admin/shift-requests', params)
 }
+
+/**
+ * @description 处理调班申请（批准或拒绝）
+ * @param {string} id - 申请ID
+ * @param {string} action - 处理动作：APPROVE（批准）或 REJECT（拒绝）
+ * @returns {Promise<void>}
+ */
+export const handleShiftRequest = (id, action) => {
+  return api.patch(`/admin/shift-requests/${id}`, { action })
+}

@@ -651,7 +651,7 @@ import { ElMessage,ElMessageBox } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 // 导入你的 API 函数
 // @ts-ignore
-import { getSchedulesHistory, getSchedules, createNextWeekSchedule, deleteSchedule, stopBatchSchedule, submitScheduleChangeRequest, batchDelaySchedule, getShiftRequests } from './api/scheduleApi.js'
+import { getSchedulesHistory, getSchedules, createNextWeekSchedule, deleteSchedule, stopBatchSchedule, submitScheduleChangeRequest, batchDelaySchedule, getShiftRequests, handleShiftRequest } from './api/scheduleApi.js'
 // import { getDoctorSchedule, addSchedule } from './api/scheduleApi.js'
 // import { getDepartmentOptions } from '@/views/DoctorQuery/api/doctorApi.js'
 // import { getDoctorListWithFilter } from '@/views/DoctorQuery/api/doctorApi.js'
@@ -1637,24 +1637,38 @@ const handleShiftRequestsReset = () => {
 }
 
 const handleApprove = async (requestId: string) => {
-  await ElMessageBox.confirm('确定要批准这个调班申请吗?', '提示', { type: 'warning' })
   try {
-    // await approveAdjustment(requestId)
+    await ElMessageBox.confirm('确定要批准这个调班申请吗?', '提示', { type: 'warning' })
+
+    await handleShiftRequest(requestId, 'APPROVE')
     ElMessage.success('已批准')
-    fetchAdjustmentRequests() // 重新加载列表
-  } catch (error) {
-    ElMessage.error('操作失败')
+
+    // 重新加载列表
+    await fetchShiftRequests()
+  } catch (error: any) {
+    // 用户取消操作时不显示错误
+    if (error !== 'cancel' && error !== 'close') {
+      console.error('批准申请失败:', error)
+      ElMessage.error('批准失败，请稍后重试')
+    }
   }
 }
 
 const handleReject = async (requestId: string) => {
-  await ElMessageBox.confirm('确定要驳回这个调班申请吗?', '提示', { type: 'warning' })
   try {
-    // await rejectAdjustment(requestId)
+    await ElMessageBox.confirm('确定要驳回这个调班申请吗?', '提示', { type: 'warning' })
+
+    await handleShiftRequest(requestId, 'REJECT')
     ElMessage.success('已驳回')
-    fetchAdjustmentRequests() // 重新加载列表
-  } catch (error) {
-    ElMessage.error('操作失败')
+
+    // 重新加载列表
+    await fetchShiftRequests()
+  } catch (error: any) {
+    // 用户取消操作时不显示错误
+    if (error !== 'cancel' && error !== 'close') {
+      console.error('驳回申请失败:', error)
+      ElMessage.error('驳回失败，请稍后重试')
+    }
   }
 }
 
