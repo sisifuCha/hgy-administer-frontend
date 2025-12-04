@@ -178,3 +178,48 @@ export const submitScheduleChangeRequest = (data) => {
 export const batchDelaySchedule = (data) => {
   return api.post('/admin/batchDelay', data)
 }
+
+/**
+ * @description 查询医生调班申请列表（管理员端）
+ * @param {Object} params - 查询参数
+ * @param {string} params.status - 申请状态：PENDING/APPROVED/REJECTED/ALL，必选，默认PENDING
+ * @param {string} params.type - 申请类型：SHIFT_CHANGE/LEAVE/ALL，必选，默认ALL
+ * @param {string} [params.doc_id] - 医生ID，可选，按医生ID查询
+ * @param {string} [params.targetDateFrom] - 起始日期，可选，格式YYYY-MM-DD
+ * @param {string} [params.targetDateTo] - 结束日期，可选，格式YYYY-MM-DD，需要和From同时出现
+ * @param {number} params.page - 当前页码，必选
+ * @param {number} params.pageSize - 每页条数，必选
+ * @returns {Promise<Object>} 返回分页的申请列表
+ *
+ * 返回数据结构：
+ * {
+ *   page: number,       // 当前页码
+ *   pageSize: number,   // 每页条数
+ *   total: number,      // 总记录数
+ *   items: Array<{      // 申请记录列表
+ *     id: number,                    // 申请ID
+ *     doctorId: number,              // 医生ID
+ *     doctorName: string,            // 医生姓名
+ *     originalScheduleId: number,    // 原始排班ID
+ *     targetScheduleId: number|null, // 目标排班ID（调班时存在）
+ *     reason: string,                // 申请原因
+ *     status: string,                // 申请状态：PENDING/APPROVED/REJECTED
+ *     targetDate: string,            // 目标排班日期，如：2025-12-10
+ *     type: string,                  // 申请类型：SHIFT_CHANGE/LEAVE
+ *     leaveLength: number|null       // 请假长度（仅请假类型使用）
+ *   }>
+ * }
+ */
+export const getShiftRequests = (params) => {
+  return api.get('/admin/shift-requests', params)
+}
+
+/**
+ * @description 处理调班申请（批准或拒绝）
+ * @param {string} id - 申请ID
+ * @param {string} action - 处理动作：APPROVE（批准）或 REJECT（拒绝）
+ * @returns {Promise<void>}
+ */
+export const handleShiftRequest = (id, action) => {
+  return api.patch(`/admin/shift-requests/${id}`, { action })
+}

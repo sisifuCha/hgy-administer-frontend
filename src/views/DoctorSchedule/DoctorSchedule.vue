@@ -407,39 +407,126 @@
 
       <!-- ==================== 4. 调班审批标签页==================== -->
       <el-tab-pane label="调班审批" name="approve">
-        <h2>待审批的调班申请</h2>
-        <el-table :data="adjustmentRequests" v-loading="requestsLoading" border>
-          <el-table-column prop="requestingDoctorName" label="申请医生" width="120"></el-table-column>
-          <el-table-column label="源班次">
+        <h2>调班申请查询</h2>
+
+        <!-- 查询条件区域 -->
+        <div class="query-conditions">
+          <el-form :inline="true">
+            <el-form-item label="申请状态">
+              <el-select v-model="shiftRequestsQuery.status" placeholder="选择状态" style="width: 150px">
+                <el-option label="待处理" value="PENDING"></el-option>
+                <el-option label="已批准" value="APPROVED"></el-option>
+                <el-option label="已驳回" value="REJECTED"></el-option>
+                <el-option label="全部" value="ALL"></el-option>
+              </el-select>
+            </el-form-item>
+
+            <el-form-item label="申请类型">
+              <el-select v-model="shiftRequestsQuery.type" placeholder="选择类型" style="width: 150px">
+                <el-option label="全部" value="ALL"></el-option>
+                <el-option label="调班" value="SHIFT_CHANGE"></el-option>
+                <el-option label="请假" value="LEAVE"></el-option>
+              </el-select>
+            </el-form-item>
+
+            <!-- 暂时注释：按医生ID查询 -->
+            <!-- <el-form-item label="医生ID">
+              <el-input v-model="shiftRequestsQuery.doc_id" placeholder="输入医生ID" clearable style="width: 150px"></el-input>
+            </el-form-item> -->
+
+            <!-- 暂时注释：按日期范围查询 -->
+            <!-- <el-form-item label="目标日期范围">
+              <el-date-picker
+                v-model="shiftRequestsQuery.targetDateFrom"
+                type="date"
+                placeholder="开始日期"
+                value-format="YYYY-MM-DD"
+                style="width: 150px"
+              />
+              <span style="margin: 0 5px">至</span>
+              <el-date-picker
+                v-model="shiftRequestsQuery.targetDateTo"
+                type="date"
+                placeholder="结束日期"
+                value-format="YYYY-MM-DD"
+                style="width: 150px"
+              />
+            </el-form-item> -->
+
+            <el-form-item>
+              <el-button type="primary" @click="handleShiftRequestsQuery" :loading="shiftRequestsLoading">查询</el-button>
+              <el-button @click="handleShiftRequestsReset">重置</el-button>
+            </el-form-item>
+          </el-form>
+        </div>
+
+        <!-- 申请列表表格 -->
+        <el-table :data="shiftRequestsList" v-loading="shiftRequestsLoading" border>
+          <el-table-column prop="id" label="申请ID" width="80"></el-table-column>
+          <el-table-column prop="doctorName" label="申请医生" width="120"></el-table-column>
+          <el-table-column prop="type" label="申请类型" width="100">
             <template #default="{ row }">
-              <div>{{ row.sourceSchedule.doctorName }}</div>
-              <div>{{ row.sourceSchedule.date }} {{ row.sourceSchedule.timeSlot }}</div>
+              <el-tag :type="row.type === 'SHIFT_CHANGE' ? 'primary' : 'warning'">
+                {{ row.type === 'SHIFT_CHANGE' ? '调班' : '请假' }}
+              </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="目的班次">
+          <el-table-column prop="targetDate" label="目标日期" width="120"></el-table-column>
+          <el-table-column label="相关排班ID" width="180">
             <template #default="{ row }">
-              <div v-if="row.isCancel">
-                <el-tag type="info">取消排班(放假)</el-tag>
-              </div>
-              <div v-else>
-                <div>{{ row.destSchedule.doctorName }}</div>
-                <div>{{ row.destSchedule.date }} {{ row.destSchedule.timeSlot }}</div>
-              </div>
+              <div>原排班: {{ row.originalScheduleId }}</div>
+              <div v-if="row.targetScheduleId">目标排班: {{ row.targetScheduleId }}</div>
             </template>
           </el-table-column>
-          <el-table-column prop="reason" label="申请理由" show-overflow-tooltip></el-table-column>
+          <el-table-column prop="leaveLength" label="请假天数" width="100">
+            <template #default="{ row }">
+              {{ row.leaveLength || '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="reason" label="申请理由" show-overflow-tooltip min-width="150"></el-table-column>
           <el-table-column prop="status" label="状态" width="100">
             <template #default="{ row }">
-              <el-tag :type="row.status === 'PENDING' ? 'warning' : 'info'">{{ row.status }}</el-tag>
+              <el-tag
+                :type="row.status === 'PENDING' ? 'warning' : row.status === 'APPROVED' ? 'success' : 'danger'"
+              >
+                {{ row.status === 'PENDING' ? '待处理' : row.status === 'APPROVED' ? '已批准' : '已驳回' }}
+              </el-tag>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="180" fixed="right">
             <template #default="{ row }">
-              <el-button size="small" type="success" @click="handleApprove(row.id)">批准</el-button>
-              <el-button size="small" type="danger" @click="handleReject(row.id)">驳回</el-button>
+              <el-button
+                size="small"
+                type="success"
+                @click="handleApprove(row.id.toString())"
+                :disabled="row.status !== 'PENDING'"
+              >
+                批准
+              </el-button>
+              <el-button
+                size="small"
+                type="danger"
+                @click="handleReject(row.id.toString())"
+                :disabled="row.status !== 'PENDING'"
+              >
+                驳回
+              </el-button>
             </template>
           </el-table-column>
         </el-table>
+
+        <!-- 分页组件 -->
+        <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
+          <el-pagination
+            v-model:current-page="shiftRequestsQuery.page"
+            v-model:page-size="shiftRequestsQuery.pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="shiftRequestsTotal"
+            layout="total, sizes, prev, pager, next, jumper"
+            @current-change="handleShiftRequestsPageChange"
+            @size-change="handleShiftRequestsPageSizeChange"
+          />
+        </div>
       </el-tab-pane>
     </el-tabs>
 
@@ -564,7 +651,7 @@ import { ElMessage,ElMessageBox } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 // 导入你的 API 函数
 // @ts-ignore
-import { getSchedulesHistory, getSchedules, createNextWeekSchedule, deleteSchedule, stopBatchSchedule, submitScheduleChangeRequest, batchDelaySchedule } from './api/scheduleApi.js'
+import { getSchedulesHistory, getSchedules, createNextWeekSchedule, deleteSchedule, stopBatchSchedule, submitScheduleChangeRequest, batchDelaySchedule, getShiftRequests, handleShiftRequest } from './api/scheduleApi.js'
 // import { getDoctorSchedule, addSchedule } from './api/scheduleApi.js'
 // import { getDepartmentOptions } from '@/views/DoctorQuery/api/doctorApi.js'
 // import { getDoctorListWithFilter } from '@/views/DoctorQuery/api/doctorApi.js'
@@ -612,6 +699,28 @@ interface AdjustmentRequest {
   isCancel: boolean;
   reason: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
+}
+
+// 调班申请列表项类型（新接口返回的数据结构）
+interface ShiftRequestItem {
+  id: number;
+  doctorId: number;
+  doctorName: string;
+  originalScheduleId: number;
+  targetScheduleId: number | null;
+  reason: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  targetDate: string;
+  type: 'SHIFT_CHANGE' | 'LEAVE';
+  leaveLength: number | null;
+}
+
+// 调班申请查询响应类型
+interface ShiftRequestsResponse {
+  page: number;
+  pageSize: number;
+  total: number;
+  items: ShiftRequestItem[];
 }
 
 // --- 通用状态 ---
@@ -767,6 +876,20 @@ const adjustDialogForm = reactive({
 // --- 调班审批状态 ---
 const requestsLoading = ref(false)
 const adjustmentRequests = ref<AdjustmentRequest[]>([])
+
+// 新的调班申请查询相关状态
+const shiftRequestsLoading = ref(false)
+const shiftRequestsList = ref<ShiftRequestItem[]>([])
+const shiftRequestsTotal = ref(0)
+const shiftRequestsQuery = reactive({
+  status: 'PENDING' as 'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL',
+  type: 'ALL' as 'SHIFT_CHANGE' | 'LEAVE' | 'ALL',
+  // doc_id: '',  // 可选，暂时注释
+  // targetDateFrom: '',  // 可选，暂时注释
+  // targetDateTo: '',    // 可选，暂时注释
+  page: 1,
+  pageSize: 10
+})
 
 // --- 批量停诊状态 ---
 const batchStopFormRef = ref<FormInstance>()
@@ -1448,25 +1571,104 @@ const fetchAdjustmentRequests = async () => {
   }
 }
 
-const handleApprove = async (requestId: string) => {
-  await ElMessageBox.confirm('确定要批准这个调班申请吗?', '提示', { type: 'warning' })
+// 查询调班申请列表（新接口）
+const fetchShiftRequests = async () => {
+  shiftRequestsLoading.value = true
   try {
-    // await approveAdjustment(requestId)
-    ElMessage.success('已批准')
-    fetchAdjustmentRequests() // 重新加载列表
+    const params = {
+      status: shiftRequestsQuery.status,
+      type: shiftRequestsQuery.type,
+      // doc_id: shiftRequestsQuery.doc_id || undefined,
+      // targetDateFrom: shiftRequestsQuery.targetDateFrom || undefined,
+      // targetDateTo: shiftRequestsQuery.targetDateTo || undefined,
+      page: shiftRequestsQuery.page,
+      pageSize: shiftRequestsQuery.pageSize
+    }
+
+    const response = await getShiftRequests(params) as ShiftRequestsResponse
+    shiftRequestsList.value = response.items || []
+    shiftRequestsTotal.value = response.total || 0
+
+    console.log('📋 查询调班申请成功:', {
+      总记录数: response.total,
+      当前页: response.page,
+      每页条数: response.pageSize,
+      返回记录数: response.items?.length
+    })
   } catch (error) {
-    ElMessage.error('操作失败')
+    console.error('查询调班申请失败:', error)
+    ElMessage.error('查询调班申请列表失败')
+    shiftRequestsList.value = []
+    shiftRequestsTotal.value = 0
+  } finally {
+    shiftRequestsLoading.value = false
+  }
+}
+
+// 处理查询按钮点击
+const handleShiftRequestsQuery = () => {
+  shiftRequestsQuery.page = 1  // 重置到第一页
+  fetchShiftRequests()
+}
+
+// 处理分页变化
+const handleShiftRequestsPageChange = (page: number) => {
+  shiftRequestsQuery.page = page
+  fetchShiftRequests()
+}
+
+// 处理每页条数变化
+const handleShiftRequestsPageSizeChange = (pageSize: number) => {
+  shiftRequestsQuery.pageSize = pageSize
+  shiftRequestsQuery.page = 1  // 重置到第一页
+  fetchShiftRequests()
+}
+
+// 重置查询条件
+const handleShiftRequestsReset = () => {
+  shiftRequestsQuery.status = 'PENDING'
+  shiftRequestsQuery.type = 'ALL'
+  // shiftRequestsQuery.doc_id = ''
+  // shiftRequestsQuery.targetDateFrom = ''
+  // shiftRequestsQuery.targetDateTo = ''
+  shiftRequestsQuery.page = 1
+  shiftRequestsQuery.pageSize = 10
+  fetchShiftRequests()
+}
+
+const handleApprove = async (requestId: string) => {
+  try {
+    await ElMessageBox.confirm('确定要批准这个调班申请吗?', '提示', { type: 'warning' })
+
+    await handleShiftRequest(requestId, 'APPROVE')
+    ElMessage.success('已批准')
+
+    // 重新加载列表
+    await fetchShiftRequests()
+  } catch (error: any) {
+    // 用户取消操作时不显示错误
+    if (error !== 'cancel' && error !== 'close') {
+      console.error('批准申请失败:', error)
+      ElMessage.error('批准失败，请稍后重试')
+    }
   }
 }
 
 const handleReject = async (requestId: string) => {
-  await ElMessageBox.confirm('确定要驳回这个调班申请吗?', '提示', { type: 'warning' })
   try {
-    // await rejectAdjustment(requestId)
+    await ElMessageBox.confirm('确定要驳回这个调班申请吗?', '提示', { type: 'warning' })
+
+    await handleShiftRequest(requestId, 'REJECT')
     ElMessage.success('已驳回')
-    fetchAdjustmentRequests() // 重新加载列表
-  } catch (error) {
-    ElMessage.error('操作失败')
+
+    // 重新加载列表
+    await fetchShiftRequests()
+  } catch (error: any) {
+    // 用户取消操作时不显示错误
+    if (error !== 'cancel' && error !== 'close') {
+      console.error('驳回申请失败:', error)
+      ElMessage.error('驳回失败，请稍后重试')
+    }
   }
 }
 
