@@ -1,4 +1,5 @@
 import api from '@/utils/api'
+import axios from "axios";
 
 /**
  * @description 获取科室选项列表
@@ -150,8 +151,14 @@ export const stopBatchSchedule = (data) => {
  * @param {string} data.reason - 调整原因（必填）
  * @returns {Promise<void>}
  */
+// export const submitScheduleChangeRequest = (data) => {
+//   return api.post('/doctor/schedule_change_request', data)
+// }
+
 export const submitScheduleChangeRequest = (data) => {
-  return api.post('/doctor/schedule_change_request', data)
+  return axios.post('http://localhost:8080/doctor/schedule_change_request', data, {
+    withCredentials: true
+  })
 }
 
 /**

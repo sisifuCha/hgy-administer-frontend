@@ -405,7 +405,7 @@
         </el-card>
       </el-tab-pane>
 
-      <!-- ==================== 4. 调班审批标签页 (新功能) ==================== -->
+      <!-- ==================== 4. 调班审批标签页==================== -->
       <el-tab-pane label="调班审批" name="approve">
         <h2>待审批的调班申请</h2>
         <el-table :data="adjustmentRequests" v-loading="requestsLoading" border>
