@@ -221,5 +221,18 @@ export const getShiftRequests = (params) => {
  * @returns {Promise<void>}
  */
 export const handleShiftRequest = (id, action) => {
-  return api.patch(`/admin/shift-requests/${id}`, { action })
+  // 获取 token
+  const token = localStorage.getItem('token')
+
+  // 使用直接的 axios 调用，避免代理问题
+  return axios.patch(`http://localhost:8080/admin/shift-requests/${id}`,
+    { action },
+    {
+      withCredentials: true,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      }
+    }
+  )
 }
