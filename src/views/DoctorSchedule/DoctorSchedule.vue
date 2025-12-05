@@ -1585,15 +1585,31 @@ const fetchShiftRequests = async () => {
       pageSize: shiftRequestsQuery.pageSize
     }
 
-    const response = await getShiftRequests(params) as ShiftRequestsResponse
-    shiftRequestsList.value = response.items || []
+    const response = await getShiftRequests(params) as any
+
+    // 字段映射：将后端字段名转换为前端期望的字段名
+    const mappedItems = (response.items || []).map((item: any) => ({
+      id: item.id,
+      doctorId: item.docId,           // 后端: docId → 前端: doctorId
+      doctorName: item.docName,        // 后端: docName → 前端: doctorName
+      originalScheduleId: item.oriScheId,  // 后端: oriScheId → 前端: originalScheduleId
+      targetScheduleId: item.targetScheId, // 后端: targetScheId → 前端: targetScheduleId
+      reason: item.reason,
+      status: item.status,
+      targetDate: item.targetDate,
+      type: item.type === 0 ? 'SHIFT_CHANGE' : 'LEAVE',  // 后端: 0/1 → 前端: 'SHIFT_CHANGE'/'LEAVE'
+      leaveLength: item.leaveLength
+    }))
+
+    shiftRequestsList.value = mappedItems
     shiftRequestsTotal.value = response.total || 0
 
     console.log('📋 查询调班申请成功:', {
       总记录数: response.total,
       当前页: response.page,
       每页条数: response.pageSize,
-      返回记录数: response.items?.length
+      返回记录数: mappedItems.length,
+      映射后的数据: mappedItems
     })
   } catch (error) {
     console.error('查询调班申请失败:', error)
