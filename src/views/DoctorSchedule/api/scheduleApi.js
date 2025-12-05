@@ -221,6 +221,26 @@ export const getShiftRequests = (params) => {
  * @returns {Promise<void>}
  */
 export const handleShiftRequest = (id, action) => {
+  console.log('🔧 handleShiftRequest 调用参数:', {
+    id,
+    action,
+    请求路径: `/admin/shift-requests/${id}`,
+    请求体: { action }
+  })
+
   // 使用 api.patch 通过代理调用，避免 CORS 问题
+  // 注意：如果后端不支持 PATCH，可能需要改用 POST 或 PUT
   return api.patch(`/admin/shift-requests/${id}`, { action })
+    .then(response => {
+      console.log('✅ handleShiftRequest 成功:', response)
+      return response
+    })
+    .catch(error => {
+      console.error('❌ handleShiftRequest 失败:', {
+        状态码: error.response?.status,
+        错误信息: error.response?.data,
+        请求配置: error.config
+      })
+      throw error
+    })
 }
