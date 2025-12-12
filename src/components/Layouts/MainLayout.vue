@@ -62,6 +62,9 @@
           <el-menu-item index="/settings/advanced">
             <span>高级设置</span>
           </el-menu-item>
+          <el-menu-item index="/home/ruleManagement">
+            <span>规则管理</span>
+          </el-menu-item>
         </el-sub-menu>
 
         <!-- 更多菜单项可以根据需求添加 -->
@@ -213,4 +216,3 @@ const handleLogout = () => {
   overflow-y: auto;
 }
 </style>
-

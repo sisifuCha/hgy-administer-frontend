@@ -63,8 +63,15 @@ service.interceptors.response.use(
     console.log('✅ API Response:', {
       url: response.config.url,
       status: response.status,
-      data: response.data
+      responseType: response.config.responseType,
+      data: response.config.responseType === 'blob' ? 'Blob Object' : response.data
     })
+
+    // 处理不同的响应类型
+    if (response.config.responseType === 'blob' || response.config.responseType === 'arraybuffer') {
+      // 对于二进制响应，直接返回完整的response对象
+      return response.data
+    }
 
     // 检查业务状态码
     const { code, message, data } = response.data

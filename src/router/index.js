@@ -24,11 +24,11 @@ const routes = [
         name: 'Dashboard',
         component: () => import('../views/dashboard/Dashboard.vue')
       },
-      {
-        path: 'dataCenter',
-        name: 'DataCenter',
-        component: () => import('../views/dataCenter/DataCenterView.vue')
-      },
+      // {
+      //   path: 'dataCenter',
+      //   name: 'DataCenter',
+      //   component: () => import('../views/dataCenter/DataCenterView.vue')
+      // },
       {
         path: 'users',
         name: 'UserManagement',
@@ -46,9 +46,10 @@ const routes = [
         component: () => import('../views/settings/AdvancedSettings.vue')
       }
       */
-      {        path: 'doctorQuery',
-               name: 'DoctorQuery',
-               component: () => import('@/views/DoctorQuery/DoctorQueryView.vue')
+      {
+        path: 'doctorQuery',
+        name: 'DoctorQuery',
+        component: () => import('@/views/DoctorQuery/DoctorQueryView.vue')
       },
       {
         path: '/home/doctorSchedule',
@@ -59,6 +60,11 @@ const routes = [
         path: '/home/patientManagement',
         name: 'PatientManagement',
         component: () => import('@/views/patientManagement/patientManagementView.vue')
+      },
+      {
+        path: '/home/ruleManagement',
+        name: 'RuleManagement',
+        component: () => import('@/views/ruleManagement/RuleManagement.vue')
       }
     ]
   }
