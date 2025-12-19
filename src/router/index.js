@@ -65,6 +65,11 @@ const routes = [
         path: '/home/ruleManagement',
         name: 'RuleManagement',
         component: () => import('@/views/ruleManagement/RuleManagement.vue')
+      },
+      {
+        path: '/home/addedSourceAudit',
+        name: 'AddedSourceAudit',
+        component: () => import('@/views/addedSourceAudit/AddedSourceAudit.vue')
       }
     ]
   }

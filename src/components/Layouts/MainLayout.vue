@@ -40,6 +40,10 @@
             <el-icon><User /></el-icon>
             <span>医生排班管理</span>
           </el-menu-item>
+          <el-menu-item index="/home/addedSourceAudit">
+            <el-icon><User /></el-icon>
+            <span>加号请求审核</span>
+          </el-menu-item>
         </el-sub-menu>
         <el-sub-menu index="3">
           <template #title>
