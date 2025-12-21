@@ -67,6 +67,11 @@ service.interceptors.response.use(
       data: response.config.responseType === 'blob' ? 'Blob Object' : response.data
     })
 
+    // 特别记录getWaitingRules的响应
+    if (response.config.url === '/admin/getWaitingRules') {
+      console.log('🔍 getWaitingRules响应详情:', JSON.stringify(response.data, null, 2))
+    }
+
     // 处理不同的响应类型
     if (response.config.responseType === 'blob' || response.config.responseType === 'arraybuffer') {
       // 对于二进制响应，直接返回完整的response对象

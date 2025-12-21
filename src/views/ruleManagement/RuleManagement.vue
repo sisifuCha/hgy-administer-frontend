@@ -27,7 +27,17 @@ const ruleData = reactive({
         fee_ratio: 0
       }
     ]
-  }
+  },
+  waiting_rules: [
+    {
+      id: 0,
+      ruleName: '',
+      ruleValue: 0,
+      description: '',
+      createdAt: '',
+      updatedAt: ''
+    }
+  ]
 })
 
 // 表单加载状态
@@ -36,6 +46,8 @@ const loading = ref(false)
 const saveLoading = ref(false)
 // 表单是否可编辑
 const isEditing = ref(false)
+// 当前激活的标签页
+const activeTab = ref('register')
 
 // 获取规则数据
 const getRuleData = async () => {
@@ -69,6 +81,10 @@ const getRuleData = async () => {
         fee_ratio: 0
       })
     }
+    
+    // 获取候补规则数据
+    const waitingRulesData = await api.getWaitingRules()
+    ruleData.waiting_rules = waitingRulesData.rules || []
     
     ElMessage.success('规则数据加载成功')
   } catch (error) {
@@ -123,7 +139,16 @@ const saveRuleData = async () => {
     }
     
     saveLoading.value = true
+    
+    // 保存挂号规则和退款规则
     await api.setRule(ruleData)
+    
+    // 保存候补规则
+    const waitingRuleValues = {}
+    ruleData.waiting_rules.forEach(rule => {
+      waitingRuleValues[rule.id] = rule.ruleValue
+    })
+    await api.changeRuleValue({ newValues: waitingRuleValues })
     
     ElMessage.success('规则保存成功')
     isEditing.value = false
@@ -167,6 +192,14 @@ const validateForm = (): boolean => {
     }
     if (item.fee_ratio < 0 || item.fee_ratio > 1) {
       ElMessage.warning('退款比例必须在0到1之间')
+      return false
+    }
+  }
+  
+  // 验证候补规则
+  for (const item of ruleData.waiting_rules) {
+    if (item.ruleValue < 0) {
+      ElMessage.warning('候补规则值不能为负数')
       return false
     }
   }
@@ -336,6 +369,33 @@ onMounted(() => {
             >
               添加退款梯度
             </el-button>
+          </el-form>
+        </el-tab-pane>
+        
+        <!-- 候补规则 -->
+        <el-tab-pane label="候补规则" name="waiting">
+          <el-form label-position="top">
+            <el-table 
+              :data="ruleData.waiting_rules" 
+              style="width: 100%"
+              border
+            >
+              <el-table-column prop="id" label="规则ID" width="80" />
+              <el-table-column prop="ruleName" label="规则名称" width="180" />
+              <el-table-column prop="ruleValue" label="规则值">
+                <template #default="scope">
+                  <el-input-number 
+                    v-model="scope.row.ruleValue" 
+                    :min="0" 
+                    :disabled="!isEditing"
+                    style="width: 100%"
+                  />
+                </template>
+              </el-table-column>
+              <el-table-column prop="description" label="规则描述" />
+              <el-table-column prop="createdAt" label="创建时间" width="180" />
+              <el-table-column prop="updatedAt" label="更新时间" width="180" />
+            </el-table>
           </el-form>
         </el-tab-pane>
       </el-tabs>
