@@ -79,22 +79,23 @@ service.interceptors.response.use(
     }
 
     // 检查业务状态码
-    const { code, message, data } = response.data
+    const { code, msg, message, data } = response.data
 
     // 根据后端返回的状态码处理
-    if (code === 200 || code === '200') {
-      // 成功响应，返回数据
-      return data
+    if (code === 0 || code === 200 || code === '200') {
+      // 成功响应，返回完整的 response.data 对象
+      // 这样可以保持一致性，让调用者能访问到 code 和其他属性
+      return { code, message: message || msg, data }
     } else if (code === 401 || code === '401') {
       // 未授权，清除token并跳转到登录页
       ElMessage.error('登录已过期，请重新登录')
       localStorage.removeItem('token')
       window.location.href = '/login'
-      return Promise.reject(new Error(message || '未授权'))
+      return Promise.reject(new Error(message || msg || '未授权'))
     } else {
       // 其他业务错误
-      ElMessage.error(message || '请求失败')
-      return Promise.reject(new Error(message || '请求失败'))
+      ElMessage.error(message || msg || '请求失败')
+      return Promise.reject(new Error(message || msg || '请求失败'))
     }
   },
   error => {

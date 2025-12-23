@@ -1,27 +1,29 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-// import { getPatientList, getPatientById, updatePatient, getPendingAuthRequests, approveAuthRequest, rejectAuthRequest } from './api/patientApi.js'
+import { ref, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { getPatientList, getPatientDetail } from './api/patientApi.js'
 
-// --- 类型定义 ---
+// --- 类型定义 --- 根据接口文档
 interface Patient {
-  userId: string;
-  userName: string;
-  userGender: string;
-  userPhone: string;
-  userEmail: string;
-  authStatus: 'VERIFIED' | 'PENDING';
-}
-interface AuthRequest {
   id: string;
-  userId: string;
-  userName: string;
-  idCard: string;
-  applyTime: string;
+  birth: string;
+  id_num: string;
+  medical_insuranceid: string;
+  reimburse_id: string;
+  status: string;
+}
+
+interface PatientDetail extends Patient {
+  email: string;
+  pass: string;
+  name: string;
+  account: string;
+  sex: string;
+  phone_num: string;
+  user_type: string;
 }
 
 // --- 状态管理 ---
-const activeTab = ref('list')
 
 // 列表页状态
 const listLoading = ref(false)
@@ -30,20 +32,14 @@ const totalPatients = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(10)
 
-// 查找与更新页状态
-const searchLoading = ref(false)
-const updateLoading = ref(false)
-const searchId = ref('')
-const searchedPatient = ref<Patient | null>(null)
-
-// 审批页状态
-const requestsLoading = ref(false)
-const authRequests = ref<AuthRequest[]>([])
+// 详情页状态
+const detailLoading = ref(false)
+const selectedPatient = ref<Patient | null>(null)
+const patientDetail = ref<PatientDetail | null>(null)
 
 // --- 生命周期函数 ---
 onMounted(() => {
   fetchPatientList()
-  fetchAuthRequests()
 })
 
 // --- 方法 ---
@@ -52,15 +48,61 @@ onMounted(() => {
 const fetchPatientList = async () => {
   listLoading.value = true
   try {
-    // const response = await getPatientList({ page: currentPage.value, num: pageSize.value })
-    // patientList.value = response.records
-    // totalPatients.value = response.total
+    // 根据接口文档，参数应为pageNum和pageSize
+    const response = await getPatientList({ pageNum: currentPage.value, pageSize: pageSize.value })
+    console.log('API响应:', response)
+    
+    // 统一处理不同code情况，优先使用接口文档指定的code=0
+    if (response.code === 0 || response.code === 200) {
+      // 尝试多种可能的响应结构
+      const data = response.data
+      if (data) {
+        // 优先使用List字段（接口文档）
+        if (Array.isArray(data.List)) {
+          patientList.value = data.List
+        } else if (Array.isArray(data.list)) {
+          // 兼容list字段
+          patientList.value = data.list
+        } else if (Array.isArray(data.records)) {
+          // 兼容records字段
+          patientList.value = data.records
+        } else if (Array.isArray(data)) {
+          // 兼容直接返回数组的情况
+          patientList.value = data
+        } else {
+          // 如果没有找到列表数据，使用空数组
+          patientList.value = []
+        }
+        
+        // 获取总条数，优先使用total字段
+        if (typeof data.total === 'number') {
+          totalPatients.value = data.total
+        } else if (typeof data.Total === 'number') {
+          // 兼容Total字段
+          totalPatients.value = data.Total
+        } else {
+          // 如果没有总条数信息，使用当前页数据长度乘以10作为估计值（最多200条）
+          totalPatients.value = Math.min(patientList.value.length * 10, 200)
+        }
+      } else {
+        // 没有data字段，使用空数组
+        patientList.value = []
+        totalPatients.value = 0
+      }
+    } else {
+      ElMessage.error(response.msg || '获取患者列表失败')
+      // 使用模拟数据
+      const mockResponse = getMockPatients(currentPage.value, pageSize.value)
+      patientList.value = mockResponse.list
+      totalPatients.value = mockResponse.total
+    }
+  } catch (error) {
+    console.error('获取患者列表失败', error)
+    ElMessage.error('获取患者列表失败')
     // 使用模拟数据
     const mockResponse = getMockPatients(currentPage.value, pageSize.value)
-    patientList.value = mockResponse.records
+    patientList.value = mockResponse.list
     totalPatients.value = mockResponse.total
-  } catch (error) {
-    ElMessage.error('获取患者列表失败')
   } finally {
     listLoading.value = false
   }
@@ -72,198 +114,234 @@ const handlePageChange = (page: number) => {
   fetchPatientList()
 }
 
-// 查找患者
-const handleSearch = async () => {
-  if (!searchId.value) {
-    ElMessage.warning('请输入患者ID')
-    return
-  }
-  searchLoading.value = true
-  searchedPatient.value = null
+// 列表页每页条数变化
+const handleSizeChange = (size: number) => {
+  pageSize.value = size
+  currentPage.value = 1
+  fetchPatientList()
+}
+
+// 点击行查看详情
+const handleRowClick = async (row: Patient) => {
+  selectedPatient.value = row
+  await fetchPatientDetail(row.id)
+}
+
+// 获取患者详情
+const fetchPatientDetail = async (patientId: string) => {
+  detailLoading.value = true
   try {
-    // const response = await getPatientById(searchId.value)
-    // searchedPatient.value = response
+    const response = await getPatientDetail(patientId)
+    console.log('API响应:', response)
+    if (response.code === 200) {
+      patientDetail.value = response.data
+    } else {
+      ElMessage.error(response.msg || '获取患者详情失败')
+      // 使用模拟数据
+      patientDetail.value = getMockPatientDetail(patientId)
+    }
+  } catch (error) {
+    console.error('获取患者详情失败', error)
+    ElMessage.error('获取患者详情失败')
     // 使用模拟数据
-    searchedPatient.value = { userId: searchId.value, userName: '模拟患者', userGender: '男', userPhone: '13800138000', userEmail: 'mock@test.com', authStatus: 'PENDING' }
-  } catch (error) {
-    ElMessage.error('查找患者失败，请检查ID是否正确')
+    patientDetail.value = getMockPatientDetail(patientId)
   } finally {
-    searchLoading.value = false
+    detailLoading.value = false
   }
 }
 
-// 更新患者信息
-const handleUpdate = async () => {
-  if (!searchedPatient.value) return
-  updateLoading.value = true
-  try {
-    // await updatePatient(searchedPatient.value.userId, searchedPatient.value)
-    ElMessage.success('患者信息更新成功！')
-  } catch (error) {
-    ElMessage.error('更新失败')
-  } finally {
-    updateLoading.value = false
+// 关闭详情
+const closeDetail = () => {
+  patientDetail.value = null
+  selectedPatient.value = null
+}
+
+// 模拟数据
+/**
+ * 生成模拟患者数据
+ */
+const getMockPatients = (pageNum: number, pageSize: number) => {
+  const all: Patient[] = [];
+  for (let i = 0; i < 20; i++) {
+    all.push({
+      id: (i + 1).toString(),
+      birth: `198${i % 10}-${(i % 12) + 1}-${(i % 28) + 1}`,
+      id_num: `110101198${i % 10}${(i % 12) + 1}${(i % 28) + 1}${String(i).padStart(4, '0')}`,
+      medical_insuranceid: `MI${String(i + 1).padStart(4, '0')}`,
+      reimburse_id: `R${String(i + 1).padStart(4, '0')}`,
+      status: i % 2 === 0 ? 'active' : 'inactive'
+    });
   }
-}
-
-// 取消编辑
-const cancelEdit = () => {
-  searchedPatient.value = null
-  searchId.value = ''
-}
-
-// 获取待审批列表
-const fetchAuthRequests = async () => {
-  requestsLoading.value = true
-  try {
-    // const response = await getPendingAuthRequests()
-    // authRequests.value = response
-    authRequests.value = getMockAuthRequests()
-  } catch (error) {
-    ElMessage.error('获取待审批列表失败')
-  } finally {
-    requestsLoading.value = false
-  }
-}
-
-// 批准申请
-const handleApprove = async (requestId: string) => {
-  await ElMessageBox.confirm('确定要批准该患者的身份认证吗?', '提示', { type: 'success' })
-  try {
-    // await approveAuthRequest(requestId)
-    ElMessage.success('已批准')
-    fetchAuthRequests() // 刷新列表
-  } catch (error) {
-    ElMessage.error('操作失败')
-  }
-}
-
-// 驳回申请
-const handleReject = async (requestId: string) => {
-  await ElMessageBox.confirm('确定要驳回该患者的身份认证吗?', '提示', { type: 'warning' })
-  try {
-    // await rejectAuthRequest(requestId)
-    ElMessage.success('已驳回')
-    fetchAuthRequests() // 刷新列表
-  } catch (error) {
-    ElMessage.error('操作失败')
-  }
-}
-
-// --- 模拟数据函数 ---
-const getMockPatients = (page: number, num: number): { records: Patient[], total: number } => {
-  const all: Patient[] = Array.from({ length: 35 }).map((_, i) => ({
-    userId: `PAT2025${1000 + i}`,
-    userName: `患者${i + 1}`,
-    userGender: i % 2 === 0 ? '男' : '女',
-    userPhone: `139${String(i).padStart(8, '0')}`,
-    userEmail: `patient${i}@hospital.com`,
-    authStatus: i < 25 ? 'VERIFIED' : 'PENDING'
-  }));
   return {
-    records: all.slice((page - 1) * num, page * num),
+    list: all.slice((pageNum - 1) * pageSize, pageNum * pageSize),
     total: all.length
   };
 }
-const getMockAuthRequests = (): AuthRequest[] => {
-  return [
-    { id: 'AUTH001', userId: 'PAT20251026', userName: '患者27', idCard: '440...X', applyTime: '2025-11-15 10:30' },
-    { id: 'AUTH002', userId: 'PAT20251027', userName: '患者28', idCard: '310...8', applyTime: '2025-11-15 11:00' },
-  ]
+
+const getMockPatientDetail = (id: string): PatientDetail => {
+  return {
+    id,
+    birth: '1990-01-01',
+    id_num: '110101199001011234',
+    medical_insuranceid: 'MI001',
+    reimburse_id: 'R001',
+    status: 'active',
+    email: `patient${id}@example.com`,
+    pass: '******',
+    name: `患者${id}`,
+    account: `account${id}`,
+    sex: id % 2 === 0 ? '女' : '男',
+    phone_num: `138001380${String(id).padStart(2, '0')}`,
+    user_type: 'patient'
+  }
 }
 </script>
 
 <template>
   <div class="patient-management-container">
-    <el-tabs v-model="activeTab">
-      <!-- ==================== 1. 患者列表 ==================== -->
-      <el-tab-pane label="患者列表" name="list">
-        <h2>所有患者</h2>
-        <el-table :data="patientList" v-loading="listLoading" border>
-          <el-table-column prop="userId" label="患者ID" width="180"></el-table-column>
-          <el-table-column prop="userName" label="姓名" width="120"></el-table-column>
-          <el-table-column prop="userGender" label="性别" width="80"></el-table-column>
-          <el-table-column prop="userPhone" label="手机号"></el-table-column>
-          <el-table-column prop="userEmail" label="邮箱"></el-table-column>
-          <el-table-column label="认证状态" width="120">
-            <template #default="{ row }">
-              <el-tag :type="row.authStatus === 'VERIFIED' ? 'success' : 'warning'">
-                {{ row.authStatus === 'VERIFIED' ? '已认证' : '待认证' }}
-              </el-tag>
-            </template>
-          </el-table-column>
-        </el-table>
+    <h2>患者信息</h2>
+    
+    <!-- 患者列表 -->
+    <el-card class="list-card" shadow="hover">
+      <template #header>
+        <div class="card-header">
+          <span>患者列表</span>
+        </div>
+      </template>
+      
+      <el-table 
+        :data="patientList" 
+        v-loading="listLoading" 
+        border 
+        style="width: 100%"
+        @row-click="handleRowClick"
+        :row-class-name="(row) => row.id === selectedPatient?.id ? 'selected-row' : ''"
+      >
+        <el-table-column prop="id" label="患者ID" width="120"></el-table-column>
+        <el-table-column prop="birth" label="出生日期" width="150"></el-table-column>
+        <el-table-column prop="id_num" label="身份证号" min-width="200"></el-table-column>
+        <el-table-column prop="medical_insuranceid" label="医保ID" width="180"></el-table-column>
+        <el-table-column prop="reimburse_id" label="报销ID" width="120"></el-table-column>
+        <el-table-column prop="status" label="状态" width="100">
+          <template #default="scope">
+            <el-tag :type="scope.row.status === 'active' ? 'success' : 'danger'">
+              {{ scope.row.status === 'active' ? '已认证' : '未认证' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+      
+      <div class="pagination-container">
         <el-pagination
           background
-          layout="prev, pager, next, total"
+          layout="prev, pager, next, total, sizes"
           :total="totalPatients"
           :current-page="currentPage"
           :page-size="pageSize"
+          :page-sizes="[10, 20, 50, 100]"
           @current-change="handlePageChange"
-          style="margin-top: 20px; justify-content: flex-end;"
+          @size-change="handleSizeChange"
         />
-      </el-tab-pane>
-
-      <!-- ==================== 2. 查找与更新 ==================== -->
-      <el-tab-pane label="查找与更新" name="search">
-        <h2>查找与更新患者信息</h2>
-        <div class="search-section">
-          <el-input v-model="searchId" placeholder="请输入患者ID" style="width: 300px; margin-right: 10px;"></el-input>
-          <el-button type="primary" @click="handleSearch" :loading="searchLoading">查找</el-button>
+      </div>
+    </el-card>
+    
+    <!-- 患者详情 -->
+    <el-card v-if="patientDetail" class="detail-card" shadow="hover">
+      <template #header>
+        <div class="card-header">
+          <span>患者详情</span>
+          <el-button type="text" @click="closeDetail">关闭</el-button>
         </div>
-
-        <el-card v-if="searchedPatient" class="update-form-card" v-loading="updateLoading">
-          <template #header>
-            <div>正在编辑患者: {{ searchedPatient.userName }} (ID: {{ searchedPatient.userId }})</div>
-          </template>
-          <el-form :model="searchedPatient" label-width="100px">
-            <el-form-item label="姓名">
-              <el-input v-model="searchedPatient.userName"></el-input>
-            </el-form-item>
-            <el-form-item label="手机号">
-              <el-input v-model="searchedPatient.userPhone"></el-input>
-            </el-form-item>
-            <el-form-item label="邮箱">
-              <el-input v-model="searchedPatient.userEmail"></el-input>
-            </el-form-item>
-            <el-form-item>
-              <el-button type="success" @click="handleUpdate">保存更新</el-button>
-              <el-button @click="cancelEdit">取消</el-button>
-            </el-form-item>
-          </el-form>
-        </el-card>
-        <el-empty v-else description="请输入ID以查找患者进行编辑"></el-empty>
-      </el-tab-pane>
-
-      <!-- ==================== 3. 认证审批 ==================== -->
-      <el-tab-pane label="认证审批" name="approval">
-        <h2>待认证申请</h2>
-        <el-table :data="authRequests" v-loading="requestsLoading" border>
-          <el-table-column prop="userId" label="患者ID"></el-table-column>
-          <el-table-column prop="userName" label="姓名"></el-table-column>
-          <el-table-column prop="idCard" label="身份证号"></el-table-column>
-          <el-table-column prop="applyTime" label="申请时间"></el-table-column>
-          <el-table-column label="操作" width="180" fixed="right">
-            <template #default="{ row }">
-              <el-button size="small" type="success" @click="handleApprove(row.id)">批准</el-button>
-              <el-button size="small" type="danger" @click="handleReject(row.id)">驳回</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </el-tab-pane>
-    </el-tabs>
+      </template>
+      
+      <div class="detail-content" v-loading="detailLoading">
+        <el-descriptions :column="2" border>
+          <el-descriptions-item label="患者ID">{{ patientDetail.id }}</el-descriptions-item>
+          <el-descriptions-item label="姓名">{{ patientDetail.name }}</el-descriptions-item>
+          <el-descriptions-item label="性别">{{ patientDetail.sex }}</el-descriptions-item>
+          <el-descriptions-item label="手机号">{{ patientDetail.phone_num }}</el-descriptions-item>
+          <el-descriptions-item label="邮箱">{{ patientDetail.email }}</el-descriptions-item>
+          <el-descriptions-item label="账户">{{ patientDetail.account }}</el-descriptions-item>
+          <el-descriptions-item label="出生日期">{{ patientDetail.birth }}</el-descriptions-item>
+          <el-descriptions-item label="身份证号">{{ patientDetail.id_num }}</el-descriptions-item>
+          <el-descriptions-item label="医保ID">{{ patientDetail.medical_insuranceid }}</el-descriptions-item>
+          <el-descriptions-item label="报销ID">{{ patientDetail.reimburse_id }}</el-descriptions-item>
+          <el-descriptions-item label="用户类型">{{ patientDetail.user_type }}</el-descriptions-item>
+          <el-descriptions-item label="状态">
+            <el-tag :type="patientDetail.status === 'active' ? 'success' : 'danger'">
+              {{ patientDetail.status === 'active' ? '激活' : '停用' }}
+            </el-tag>
+          </el-descriptions-item>
+        </el-descriptions>
+      </div>
+    </el-card>
   </div>
 </template>
 
 <style scoped>
 .patient-management-container {
   padding: 20px;
+  background-color: #f5f7fa;
+  min-height: 100vh;
 }
-.search-section {
+
+h2 {
   margin-bottom: 20px;
+  color: #303133;
+  font-size: 24px;
+  font-weight: 600;
 }
-.update-form-card {
+
+.list-card {
+  margin-bottom: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.detail-card {
   margin-top: 20px;
-  max-width: 600px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.el-table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.el-table__header-wrapper th {
+  background-color: #f5f7fa;
+  font-weight: 600;
+}
+
+.selected-row {
+  background-color: #ecf5ff;
+}
+
+.pagination-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.detail-content {
+  margin-top: 20px;
+}
+
+.el-descriptions {
+  background-color: #fafafa;
+}
+
+.el-descriptions__label {
+  background-color: #f5f7fa;
+  font-weight: 500;
 }
 </style>

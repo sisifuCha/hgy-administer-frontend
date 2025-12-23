@@ -16,8 +16,8 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8080', // 后端服务地址
         changeOrigin: true,              // 允许跨域
-        secure: false,                     // HTTP 后端时设为 false
-        rewrite:(path) => path.replace(/^\/api/, '') // 重写路径
+        secure: false,                   // HTTP 后端时设为 false
+        rewrite: (path) => path.replace(/^\/api/, '') // 重写路径，移除/api前缀
       }
     }
   }

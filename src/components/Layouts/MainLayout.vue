@@ -48,11 +48,11 @@
         <el-sub-menu index="3">
           <template #title>
             <el-icon><User /></el-icon>
-            <span>患者管理</span>
+            <span>患者查看</span>
           </template>
           <el-menu-item index="/home/patientManagement">
             <el-icon><User /></el-icon>
-            <span>患者信息管理</span>
+            <span>患者信息查看</span>
           </el-menu-item>
         </el-sub-menu>
         <el-sub-menu index="4">

@@ -121,9 +121,9 @@
                     >
                       <el-option
                         v-for="doc in doctorOptions"
-                        :key="doc.userId"
-                        :label="`${doc.userName} (${doc.doctorSpeciality})`"
-                        :value="doc.userId"
+                        :key="doc.userid"
+                        :label="`${doc.username} (${doc.department})`"
+                        :value="doc.userid"
                       >
                       </el-option>
                     </el-select>
@@ -255,9 +255,9 @@
                       <el-select v-model="schedule.doctor_name" placeholder="选择医生" filterable style="width: 100%">
                         <el-option
                           v-for="doc in doctorOptions"
-                          :key="doc.userId"
-                          :label="`${doc.userName} (${doc.doctorSpeciality})`"
-                          :value="doc.userName">
+                          :key="doc.userid"
+                          :label="`${doc.username} (${doc.department})`"
+                          :value="doc.username">
                         </el-option>
                       </el-select>
                     </el-col>
@@ -299,9 +299,9 @@
               >
                 <el-option
                   v-for="doc in doctorOptions"
-                  :key="doc.userId"
-                  :label="`${doc.userName} (${doc.doctorSpeciality})`"
-                  :value="doc.userId"
+                  :key="doc.userid"
+                  :label="`${doc.username} (${doc.department})`"
+                  :value="doc.userid"
                 >
                 </el-option>
               </el-select>
@@ -530,128 +530,88 @@
       </el-tab-pane>
     </el-tabs>
 
-    <!-- ==================== 调班申请对话框 ==================== -->
-    <el-dialog
-      v-model="adjustDialogVisible"
-      title="调班申请"
-      width="600px"
-      :close-on-click-modal="false"
-      @close="handleDialogClose"
-    >
-      <el-form
-        :model="adjustDialogForm"
-        :rules="adjustDialogFormRules"
-        ref="adjustDialogFormRef"
-        label-width="120px"
-      >
-        <!-- 显示当前排班信息 -->
-        <el-alert
-          :title="`当前排班：${adjustDialogForm.doctorName} - ${adjustDialogForm.originalScheduleInfo}`"
-          type="info"
-          :closable="false"
-          show-icon
-          style="margin-bottom: 20px;"
-        />
 
-        <!-- 调整类型 -->
-        <el-form-item label="调整类型" prop="changeType" required>
-          <el-radio-group v-model="adjustDialogForm.changeType">
-            <el-radio :value="0">调班</el-radio>
-            <el-radio :value="1">请假</el-radio>
-          </el-radio-group>
-        </el-form-item>
-
-        <!-- 调班信息 (仅在选择调班时显示) -->
-        <template v-if="adjustDialogForm.changeType === 0">
-          <el-form-item label="目标日期" prop="targetDate" required>
-            <el-date-picker
-              v-model="adjustDialogForm.targetDate"
-              type="date"
-              placeholder="选择目标日期"
-              value-format="YYYY-MM-DD"
-              style="width: 100%"
-            />
-          </el-form-item>
-
-          <el-form-item label="目标时段" prop="targetTimePeriod" required>
-            <el-select v-model="adjustDialogForm.targetTimePeriod" placeholder="请选择时段" style="width: 100%">
-              <el-option label="上午" :value="1"></el-option>
-              <el-option label="下午" :value="2"></el-option>
-            </el-select>
-          </el-form-item>
-
-          <el-form-item label="目标医生" prop="targetDoctorId">
-            <el-select
-              v-model="adjustDialogForm.targetDoctorId"
-              placeholder="可选：与其他医生换班"
-              filterable
-              clearable
-              style="width: 100%"
-            >
-              <el-option
-                v-for="doc in doctorOptions"
-                :key="doc.userId"
-                :label="`${doc.userName} (${doc.doctorSpeciality})`"
-                :value="doc.userId"
-              >
-              </el-option>
-            </el-select>
-          </el-form-item>
-        </template>
-
-        <!-- 请假信息 (仅在选择请假时显示) -->
-        <template v-if="adjustDialogForm.changeType === 1">
-          <el-form-item label="请假天数" prop="daysOff" required>
-            <el-input-number
-              v-model="adjustDialogForm.daysOff"
-              :min="1"
-              :max="30"
-              placeholder="请输入请假天数"
-              style="width: 100%"
-            />
-          </el-form-item>
-
-          <el-alert
-            title="注意：请假将从原班次开始计算天数"
-            type="info"
-            show-icon
-            :closable="false"
-            style="margin-top: 10px;"
-          />
-        </template>
-
-        <!-- 调整原因 -->
-        <el-form-item label="调整原因" prop="reason" required>
-          <el-input
-            v-model="adjustDialogForm.reason"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入调整原因（必填）"
-            maxlength="200"
-            show-word-limit
-          />
-        </el-form-item>
-      </el-form>
-
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="adjustDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleDialogSubmit" :loading="adjustDialogLoading">
-            提交申请
-          </el-button>
-        </div>
-      </template>
-    </el-dialog>
   </div>
+
+  <!-- 调班申请对话框 -->
+  <el-dialog
+    v-model="adjustDialogVisible"
+    title="排班变更申请"
+    width="600px"
+    :close-on-click-modal="false"
+    :before-close="handleDialogClose"
+  >
+    <el-form
+      :model="adjustDialogForm"
+      :rules="adjustDialogFormRules"
+      ref="adjustDialogFormRef"
+      label-width="120px"
+    >
+      <!-- 显示当前排班信息 -->
+      <el-alert
+        :title="`当前排班：${adjustDialogForm.doctorName}`"
+        type="info"
+        :closable="false"
+        show-icon
+        style="margin-bottom: 20px;"
+      />
+
+      <!-- 调整类型 -->
+      <el-form-item label="调整类型" prop="changeType" required>
+        <el-radio-group v-model="adjustDialogForm.changeType">
+          <el-radio :value="0">调班</el-radio>
+          <el-radio :value="1">请假</el-radio>
+        </el-radio-group>
+      </el-form-item>
+
+      <!-- 目标日期 (仅调班时显示) -->
+      <el-form-item label="目标日期" prop="targetDate" v-if="adjustDialogForm.changeType === 0">
+        <el-date-picker
+          v-model="adjustDialogForm.targetDate"
+          type="date"
+          placeholder="选择目标日期"
+          value-format="YYYY-MM-DD"
+          style="width: 100%"
+        />
+      </el-form-item>
+
+      <!-- 目标时段 (仅调班时显示) -->
+      <el-form-item label="目标时段" prop="targetTime" v-if="adjustDialogForm.changeType === 0">
+        <el-select v-model="adjustDialogForm.targetTime" placeholder="选择目标时段" style="width: 100%">
+          <el-option label="上午" :value="'TIME0001'"></el-option>
+          <el-option label="下午" :value="'TIME0002'"></el-option>
+        </el-select>
+      </el-form-item>
+
+      <!-- 调整原因 -->
+      <el-form-item label="调整原因" prop="reason" required>
+        <el-input
+          v-model="adjustDialogForm.reason"
+          type="textarea"
+          :rows="4"
+          placeholder="请输入调整原因"
+        />
+      </el-form-item>
+    </el-form>
+
+    <template #footer>
+      <div class="dialog-footer">
+        <el-button @click="handleDialogClose">取消</el-button>
+        <el-button type="primary" @click="handleSubmitAdjustment" :loading="adjustDialogLoading">
+          提交申请
+        </el-button>
+      </div>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, onBeforeUnmount } from 'vue'
 import { ElMessage,ElMessageBox } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 // 导入你的 API 函数
 // @ts-ignore
-import { getSchedulesHistory, getSchedules, createNextWeekSchedule, deleteSchedule, stopBatchSchedule, submitScheduleChangeRequest, batchDelaySchedule, getShiftRequests, handleShiftRequest } from './api/scheduleApi.js'
+import { getSchedulesHistory, getSchedules, createNextWeekSchedule, deleteSchedule, stopBatchSchedule, batchDelaySchedule, getShiftRequests, handleShiftRequest, submitScheduleChangeRequest, getDoctorOptions, requestScheduleAdjustment } from './api/scheduleApi.js'
 // import { getDoctorSchedule, addSchedule } from './api/scheduleApi.js'
 // import { getDepartmentOptions } from '@/views/DoctorQuery/api/doctorApi.js'
 // import { getDoctorListWithFilter } from '@/views/DoctorQuery/api/doctorApi.js'
@@ -670,9 +630,9 @@ interface Department {
 
 // 医生选项类型
 interface DoctorOption {
-  userId: string;
-  userName: string;
-  doctorSpeciality: string;
+  userid: string;
+  username: string;
+  department: string;
 }
 
 // 详细排班信息类型
@@ -734,6 +694,28 @@ const doctorOptions = ref<DoctorOption[]>([])
 const scheduleDetails = ref<ScheduleDetail[]>([])
 const stopDialogVisible = ref(false)
 const selectedSchedule = ref(null)
+
+// --- 调班申请状态 ---
+const adjustDialogVisible = ref(false)
+const adjustDialogFormRef = ref<FormInstance>()
+const adjustDialogLoading = ref(false)
+const adjustDialogForm = reactive({
+  id: '',
+  doc_id: '',
+  doctorName: '',
+  changeType: 0, // 0: 调班, 1: 请假
+  targetDate: '',
+  targetTime: 'TIME0001', // 默认上午
+  reason: ''
+})
+
+// 调班申请表单验证规则
+const adjustDialogFormRules = reactive({
+  changeType: [{ required: true, message: '请选择调整类型', trigger: 'change' }],
+  targetDate: [{ required: adjustDialogForm.changeType === 0, message: '请选择目标日期', trigger: 'change' }],
+  reason: [{ required: true, message: '请输入调整原因', trigger: 'blur' },
+          { min: 2, max: 200, message: '调整原因长度在 2 到 200 个字符', trigger: 'blur' }]
+})
 
 // --- 查询功能状态 ---
 const queryForm = reactive({
@@ -801,9 +783,13 @@ const weekDays = computed(() => {
   for (let i = 0; i < 7; i++) {
     const date = new Date(startDate)
     date.setDate(startDate.getDate() + i)
+    // 生成完整的yyyy-MM-dd格式日期
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
     days.push({
       dayName: dayNames[i],
-      date: `${date.getMonth() + 1}-${date.getDate()}`
+      date: `${year}-${month}-${day}`
     })
   }
   return days
@@ -854,24 +840,7 @@ const batchDelayForm = reactive({
   reason: ''                  // 延后原因
 })
 
-// --- 调班申请对话框状态 ---
-const adjustDialogVisible = ref(false)
-const adjustDialogFormRef = ref<FormInstance>()
-const adjustDialogLoading = ref(false)
-const dialogSourceSchedulesLoading = ref(false)
-const dialogSourceSchedules = ref<ScheduleOption[]>([])
-const adjustDialogForm = reactive({
-  doctorId: '',
-  doctorName: '',             // 用于显示
-  originalScheduleId: '',
-  originalScheduleInfo: '',   // 用于显示
-  changeType: 0,
-  targetDate: '',
-  targetTimePeriod: 1,
-  targetDoctorId: '',
-  daysOff: 1,
-  reason: ''
-})
+
 
 // --- 调班审批状态 ---
 const requestsLoading = ref(false)
@@ -947,44 +916,25 @@ const batchDelayRules = {
   ]
 }
 
-// 调班申请对话框表单验证规则
-const adjustDialogFormRules = computed(() => {
-  const baseRules = {
-    changeType: [
-      { required: true, message: '请选择调整类型', trigger: 'change' }
-    ],
-    reason: [
-      { required: true, message: '请输入调整原因', trigger: 'blur' },
-      { min: 2, max: 200, message: '调整原因长度在 2 到 200 个字符', trigger: 'blur' }
-    ]
-  }
 
-  // 根据调整类型动态添加验证规则
-  if (adjustDialogForm.changeType === 0) {
-    return {
-      ...baseRules,
-      targetDate: [
-        { required: true, message: '请选择目标日期', trigger: 'change' }
-      ],
-      targetTimePeriod: [
-        { required: true, message: '请选择目标时段', trigger: 'change' }
-      ]
-    }
-  } else {
-    return {
-      ...baseRules,
-      daysOff: [
-        { required: true, message: '请输入请假天数', trigger: 'blur' },
-        { type: 'number', min: 1, max: 30, message: '请假天数必须在 1-30 天之间', trigger: 'blur' }
-      ]
-    }
-  }
-})
 
 // --- 生命周期函数 ---
+// 定义定时器变量
+let doctorRefreshTimer = null
+
+// 获取医生选项数据
+const fetchDoctorOptions = async () => {
+  try {
+    const response = await getDoctorOptions()
+    doctorOptions.value = response.data.options || []
+  } catch (error) {
+    console.error('获取医生选项失败:', error)
+    ElMessage.error('获取医生选项失败')
+  }
+}
+
 onMounted(() => {
-  // fetchInitialData()
-  // fetchAdjustmentRequests() // 获取待审批列表
+  // 设置科室数据
   departments.value = [
     { id: 'DEP001', name: '内科' },
     { id: 'DEP002', name: '外科' },
@@ -1009,52 +959,77 @@ onMounted(() => {
     { id: 'DEP021', name: '儿科门诊' },
     { id: 'DEP022', name: '眼科门诊' },
   ]
-  // 使用模拟数据
-  doctorOptions.value = [
-    { userId: 'DOC0004', userName: '王崇慧', doctorSpeciality: '泌尿外科' },
-    { userId: 'DOC0006', userName: '刘炳岩', doctorSpeciality: '泌尿外科' },
-    { userId: 'DOC0007', userName: '严肃', doctorSpeciality: '泌尿外科' },
-    {userId:'DOC0008',userName:'乔逸',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0026',userName:'冷俊胜',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0040',userName:'刘广华',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0055',userName:'叶子兴',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0059',userName:'吴兴成',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0070',userName:'周敏敏',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0071',userName:'周敬敏',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0072',userName:'周智恩',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0097',userName:'左宇志',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0116',userName:'张学斌',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0125',userName:'张玉石',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0132',userName:'张震宇',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0143',userName:'徐维锋',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0150',userName:'文进',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0164',userName:'李宏军',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0172',userName:'李永强',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0196',userName:'毛全宗',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0215',userName:'王文达',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0218',userName:'王栋',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0239',userName:'石维坤',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0245',userName:'纪志刚',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0256',userName:'肖河',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0262',userName:'范欣荣',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0264',userName:'荣石',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0267',userName:'董德鑫',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0277',userName:'谢燚',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0283',userName:'赵奕',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0286',userName:'赵扬',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0292',userName:'连鹏鹄',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0294',userName:'邓建华',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0305',userName:'郑国洋',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0354',userName:'马琳',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0362',userName:'魏梦超',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0365',userName:'黄厚锋',doctorSpeciality:'泌尿外科'},
-    {userId:'DOC0367',userName:'黄钟明',doctorSpeciality:'泌尿外科'},
-    { userId: '6', userName: '朱燕林', doctorSpeciality: '妇产科' }
-  ]
+  
+  // 初始加载所有医生
+  fetchAllDoctors()
+  // 获取医生选项
+  fetchDoctorOptions()
+  
+  // 设置心跳刷新机制，每隔5分钟更新一次医生列表
+  doctorRefreshTimer = setInterval(fetchAllDoctors, 300000)
+  
   adjustmentRequests.value = getMockAdjustmentRequests()
 })
 
+// 组件卸载时清除定时器
+onBeforeUnmount(() => {
+  if (doctorRefreshTimer) {
+    clearInterval(doctorRefreshTimer)
+    doctorRefreshTimer = null
+  }
+})
+
 // --- 方法 ---
+// 获取所有医生的函数（不是分页数据）
+const fetchAllDoctors = async () => {
+  try {
+    console.log('开始获取医生列表...')
+    const response = await getDoctorOptions()
+    
+    console.log('获取医生列表响应:', response)
+    console.log(response.data.options)
+    // 处理响应格式：response.data.data.options数组
+    let doctors = []
+    if (response.data && response.data.options && Array.isArray(response.data.options)) {
+      doctors = response.data.options
+      console.log("转换后的医生数据:", doctors)
+      if (doctors.length > 0) {
+        // 将API返回的医生数据转换为前端需要的格式
+        doctorOptions.value = doctors.map(doc => ({
+          userid: doc.userid, // 生成唯一ID
+          username: doc.username, // 医生名字
+          department: doc.department || '未指定科室' // 使用科室名称代替专长
+        }))
+        
+        console.log(`成功加载 ${doctorOptions.value.length} 名医生`)
+      } else {
+        console.warn('未获取到医生数据，使用默认模拟数据')
+          // 如果API没有返回数据，使用默认模拟数据
+          doctorOptions.value = [
+            { userid: 'DOC0004', username: '王崇慧', department: '泌尿外科' },
+            { userid: 'DOC0006', username: '刘炳岩', department: '泌尿外科' },
+            { userid: 'DOC0007', username: '严肃', department: '泌尿外科' },
+            { userid: 'DOC0008', username: '乔逸', department: '泌尿外科' },
+            { userid: '6', username: '朱燕林', department: '妇产科' }
+          ]
+      }
+    } else {
+      console.error('响应格式不符合要求:', response)
+      // 如果响应格式不正确，使用默认模拟数据
+        doctorOptions.value = [
+          { userid: 'DOC0004', username: '王崇慧', department: '泌尿外科' },
+          { userid: 'DOC0006', username: '刘炳岩', department: '泌尿外科' },
+          { userid: 'DOC0007', username: '严肃', department: '泌尿外科' },
+          { userid: 'DOC0008', username: '乔逸', department: '泌尿外科' },
+          { userid: '6', username: '朱燕林', department: '妇产科' }
+        ]
+    }
+  } catch (error) {
+    console.error('获取医生列表异常:', error)
+    // 如果API请求异常，保持当前医生数据不变
+  }
+}
+
 const fetchInitialData = async () => {
   try {
     // const [deptRes, docRes] = await Promise.all([
@@ -1130,30 +1105,35 @@ const handleQueryByWeek = async () => {
     console.log('==================== 后端返回数据结构 ====================')
     console.log('response:', response)
     console.log('response 类型:', typeof response)
-    console.log('response 是否为数组:', Array.isArray(response))
-    console.log('response 的键:', response ? Object.keys(response) : 'null')
+    console.log('response.data:', response.data)
     console.log('========================================================')
 
     // 处理响应数据 - 将按星期分组的数据转换为数组格式
     const convertedData: ScheduleDetail[] = []
 
-    if (response && typeof response === 'object') {
-      Object.keys(response).forEach(dayKey => {
+    // 获取实际的排班数据（后端返回的数据在 response.data 中）
+    const scheduleData = response.data || {}
+
+    console.log("scheduleData:", scheduleData)
+
+    if (scheduleData && typeof scheduleData === 'object') {
+      Object.keys(scheduleData).forEach(dayKey => {
         const dayIndex = dayMap[dayKey] as number // 明确告诉 TypeScript 这是 number
-        const schedules = response[dayKey]
+        const schedules = scheduleData[dayKey]
+        console.log(`处理 ${dayKey} 的排班数据:`, schedules)
 
         if (Array.isArray(schedules)) {
           schedules.forEach((schedule: any) => {
             convertedData.push({
-              id: schedule.schedule_id || '',
-              timeSlot: timeSlotMap[schedule.schedule_time_id] || '未知',
+              id: schedule.id || '',
+              timeSlot: timeSlotMap[schedule.template_id] || '未知',  // 使用 template_id 映射时间段
               dayIndex: dayIndex,
-              doctorId: schedule.doctor_id || '',
-              doctorName: schedule.doctor_name || `医生${schedule.doctor_id}`,  // 暂时使用 doctor_id
-              doctorTitle: schedule.doctor_title || '医师',  // 默认职称
-              roomNumber: schedule.room_number || '待定',  // 默认诊室
-              remainingQuota: schedule.available_slots || 0,
-              templateId: schedule.schedule_time_id || '',  // 保存 template_id
+              doctorId: schedule.doc_id || '',  // 使用组合ID作为医生ID
+              doctorName: schedule.doc_name || '未知医生',  // 后端返回的是 doc_name
+              doctorTitle: schedule.title || '医师',  // 后端返回的是 title
+              roomNumber: '待定',  // 后端没有返回该字段
+              remainingQuota: parseInt(schedule.left_source_count) || 0,  // 后端返回的是 left_source_count
+              templateId: schedule.template_id || '',  // 后端返回的是 template_id
               status: schedule.status === 'stopped' ? 'stopped' : 'normal'  // 设置状态
             })
           })
@@ -1163,6 +1143,8 @@ const handleQueryByWeek = async () => {
 
     console.log('✅ 转换后的数据:', convertedData)
     scheduleDetails.value = convertedData
+    console.log('🔄 表格显示状态:', showScheduleTable.value)
+    console.log("scheduleDetails.value:", scheduleDetails)
     showScheduleTable.value = true
   } catch (error) {
     console.error('获取排班数据失败', error)
@@ -1382,8 +1364,8 @@ const handleBatchDelaySubmit = async () => {
     // 获取选中医生的名字列表
     const selectedDoctorNames = batchDelayForm.doctorIds
       .map(id => {
-        const doctor = doctorOptions.value.find(doc => doc.userId === id)
-        return doctor ? doctor.userName : ''
+        const doctor = doctorOptions.value.find(doc => doc.userid === id)
+        return doctor ? doctor.username : ''
       })
       .filter(name => name)
 
@@ -1481,81 +1463,7 @@ const resetBatchDelayForm = () => {
   batchDelayForm.reason = ''
 }
 
-// --- 调班申请对话框相关方法 ---
-// 重置对话框表单
-const resetAdjustDialogForm = () => {
-  if (adjustDialogFormRef.value) {
-    adjustDialogFormRef.value.resetFields()
-  }
-  adjustDialogForm.doctorId = ''
-  adjustDialogForm.doctorName = ''
-  adjustDialogForm.originalScheduleId = ''
-  adjustDialogForm.originalScheduleInfo = ''
-  adjustDialogForm.changeType = 0
-  adjustDialogForm.targetDate = ''
-  adjustDialogForm.targetTimePeriod = 1
-  adjustDialogForm.targetDoctorId = ''
-  adjustDialogForm.daysOff = 1
-  adjustDialogForm.reason = ''
-}
 
-// 关闭对话框
-const handleDialogClose = () => {
-  resetAdjustDialogForm()
-}
-
-// 提交对话框表单
-const handleDialogSubmit = async () => {
-  if (!adjustDialogFormRef.value) return
-
-  try {
-    // 验证表单
-    await adjustDialogFormRef.value.validate()
-
-    adjustDialogLoading.value = true
-
-    // 构造请求数据
-    const requestData: any = {
-      doctorId: adjustDialogForm.doctorId,
-      originalScheduleId: adjustDialogForm.originalScheduleId,
-      changeType: adjustDialogForm.changeType,
-      reason: adjustDialogForm.reason
-    }
-
-    // 根据调整类型添加相应字段
-    if (adjustDialogForm.changeType === 0) {
-      // 调班类型
-      requestData.targetDate = adjustDialogForm.targetDate
-      requestData.targetTimePeriod = adjustDialogForm.targetTimePeriod
-      if (adjustDialogForm.targetDoctorId) {
-        requestData.targetDoctorId = adjustDialogForm.targetDoctorId
-      }
-    } else {
-      // 请假类型
-      requestData.daysOff = adjustDialogForm.daysOff
-    }
-
-    console.log('对话框提交的调班申请数据:', requestData)
-
-    // 调用API
-    await submitScheduleChangeRequest(requestData)
-
-    ElMessage.success('调班申请提交成功！')
-
-    // 关闭对话框
-    adjustDialogVisible.value = false
-
-    // 重新查询排班数据（可选）
-    // handleQueryClick()
-  } catch (error: any) {
-    if (error !== 'cancel') {
-      console.error('提交调班申请失败:', error)
-      ElMessage.error(error.message || '提交失败，请重试')
-    }
-  } finally {
-    adjustDialogLoading.value = false
-  }
-}
 
 // --- 调班审批相关方法 ---
 const fetchAdjustmentRequests = async () => {
@@ -1586,9 +1494,10 @@ const fetchShiftRequests = async () => {
     }
 
     const response = await getShiftRequests(params) as any
+    console.log("查询调班申请响应:", response.data.items)
 
     // 字段映射：将后端字段名转换为前端期望的字段名
-    const mappedItems = (response.items || []).map((item: any) => ({
+    const mappedItems = (response.data.items || []).map((item: any) => ({
       id: item.id,
       doctorId: item.docId,           // 后端: docId → 前端: doctorId
       doctorName: item.docName,        // 后端: docName → 前端: doctorName
@@ -1689,34 +1598,6 @@ const handleReject = async (requestId: string) => {
 }
 
 // --- 排班卡片操作方法 ---
-const handleAdjustSchedule = (schedule: ScheduleDetail) => {
-  console.log('🔄 调班操作 - 选中的排班信息:', {
-    排班ID: schedule.id,
-    医生ID: schedule.doctorId,
-    医生姓名: schedule.doctorName,
-    医生职称: schedule.doctorTitle,
-    时间段: schedule.timeSlot,
-    星期索引: schedule.dayIndex,
-    诊室: schedule.roomNumber,
-    剩余号源: schedule.remainingQuota
-  })
-
-  // 计算日期信息（根据weekDays和dayIndex）
-  const dayInfo = weekDays.value[schedule.dayIndex]
-  const scheduleInfo = dayInfo ? `${dayInfo.date} ${schedule.timeSlot}` : schedule.timeSlot
-
-  // 重置对话框表单
-  resetAdjustDialogForm()
-
-  // 填充排班信息
-  adjustDialogForm.doctorId = schedule.doctorId
-  adjustDialogForm.doctorName = schedule.doctorName
-  adjustDialogForm.originalScheduleId = schedule.id
-  adjustDialogForm.originalScheduleInfo = scheduleInfo
-
-  // 打开对话框
-  adjustDialogVisible.value = true
-}
 
 const handleDeleteSchedule = async (schedule: ScheduleDetail) => {
   console.log('删除排班操作 - 选中的排班信息:', {
@@ -1771,8 +1652,89 @@ const handleDeleteSchedule = async (schedule: ScheduleDetail) => {
   }
 }
 
+// --- 调班申请相关方法 ---
+// 处理调班按钮点击事件
+const handleAdjustSchedule = (schedule: ScheduleDetail) => {
+  console.log("处理调班按钮点击事件 - 选中的排班信息:", schedule)
+  // 初始化表单数据
+  adjustDialogForm.id = schedule.id
+  adjustDialogForm.doc_id = schedule.doctorId
+  adjustDialogForm.doctorName = schedule.doctorName
+  adjustDialogForm.changeType = 0
+  adjustDialogForm.targetDate = ''
+  adjustDialogForm.targetTime = 'TIME0001'
+  adjustDialogForm.reason = ''
+  
+  // 打开对话框
+  adjustDialogVisible.value = true
+}
 
+// 提交调班申请
+const handleSubmitAdjustment = async () => {
+  if (!adjustDialogFormRef.value) return
+  
+  try {
+    // 验证表单
+    await adjustDialogFormRef.value.validate()
+    
+    adjustDialogLoading.value = true
+    console.log("调整排班表单数据:", adjustDialogForm)
+    // 构造请求数据
+    const requestData = {
+      doc_id: adjustDialogForm.doc_id,
+      id: adjustDialogForm.id,
+      changeType: adjustDialogForm.changeType,
+      targetDate: adjustDialogForm.changeType === 0 ? adjustDialogForm.targetDate : undefined,
+      targetTime: adjustDialogForm.changeType === 0 ? adjustDialogForm.targetTime : undefined,
+      reason: adjustDialogForm.reason
+    }
+    console.log('提交调班申请数据:', requestData)
+    
+    // 调用API
+    await submitScheduleChangeRequest(requestData)
+    
+    ElMessage.success('排班变更申请提交成功！')
+    
+    // 关闭对话框
+    adjustDialogVisible.value = false
+    
+    // 重置表单
+    resetAdjustDialogForm()
+    
+    // 重新查询排班数据
+    handleQueryClick()
+    
+  } catch (error) {
+    if (error === 'cancel') {
+      ElMessage.info('已取消操作')
+    } else {
+      console.error('提交排班变更申请失败:', error)
+      ElMessage.error('提交排班变更申请失败，请重试')
+    }
+  } finally {
+    adjustDialogLoading.value = false
+  }
+}
 
+// 关闭对话框
+const handleDialogClose = () => {
+  adjustDialogVisible.value = false
+  resetAdjustDialogForm()
+}
+
+// 重置调班申请表单
+const resetAdjustDialogForm = () => {
+  if (adjustDialogFormRef.value) {
+    adjustDialogFormRef.value.resetFields()
+  }
+  adjustDialogForm.id = ''
+  adjustDialogForm.doc_id = ''
+  adjustDialogForm.doctorName = ''
+  adjustDialogForm.changeType = 0
+  adjustDialogForm.targetDate = ''
+  adjustDialogForm.targetTime = 'TIME0001'
+  adjustDialogForm.reason = ''
+}
 
 // --- 批量停诊相关方法 ---
 const handleBatchStop = async () => {
@@ -1804,8 +1766,8 @@ const handleBatchStop = async () => {
     // 获取选中医生的名字列表
     const selectedDoctorNames = batchStopForm.doctorIds
       .map(id => {
-        const doctor = doctorOptions.value.find(doc => doc.userId === id)
-        return doctor ? doctor.userName : ''
+        const doctor = doctorOptions.value.find(doc => doc.userid === id)
+        return doctor ? doctor.username : ''
       })
       .filter(name => name)
 

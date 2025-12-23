@@ -156,9 +156,26 @@ export const stopBatchSchedule = (data) => {
 // }
 
 export const submitScheduleChangeRequest = (data) => {
-  return axios.post('http://localhost:8080/doctor/schedule_change_request', data, {
-    withCredentials: true
+  console.log('🔧 submitScheduleChangeRequest 调用参数:', {
+    请求数据: data,
+    请求URL: '/admin/schedule_change_request',
+    请求类型: 'POST'
   })
+
+  return api.post('/admin/schedule_change_request', data)
+    .then(response => {
+      console.log('✅ submitScheduleChangeRequest 成功:', response)
+      return response
+    })
+    .catch(error => {
+      console.error('❌ submitScheduleChangeRequest 失败:', {
+        状态码: error.response?.status,
+        错误信息: error.response?.data,
+        请求配置: error.config,
+        完整错误: error
+      })
+      throw error
+    })
 }
 
 /**
@@ -243,4 +260,12 @@ export const handleShiftRequest = (id, action) => {
       })
       throw error
     })
+}
+
+/**
+ * @description 获取医生选项列表
+ * @returns {Promise<Array<{userid: string, username: string, department: string}>>} 医生选项列表
+ */
+export const getDoctorOptions = () => {
+  return api.get('/admin/getDoctorOptions')
 }
