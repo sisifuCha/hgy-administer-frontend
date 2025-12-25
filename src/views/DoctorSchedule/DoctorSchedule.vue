@@ -62,12 +62,12 @@
                     v-for="schedule in getScheduleByTimeAndDay(scope.row.timeSlot, index)"
                     :key="schedule.id"
                     class="doctor-schedule-card clickable"
-                    :class="{ 'stopped': schedule.status === 'stopped' }"
+                    :class="{ 'stopped': schedule.status === -1 }"
                   >
                     <div class="card-content">
                       <div class="doctor-name">
                         {{ schedule.doctorName }} ({{ schedule.doctorTitle }})
-                        <el-tag v-if="schedule.status === 'stopped'" type="info" size="small" class="status-tag">停诊</el-tag>
+                        <el-tag v-if="schedule.status === -1" type="info" size="small" class="status-tag">停诊</el-tag>
                       </div>
                       <div class="schedule-info">
                         <span class="room">{{ schedule.roomNumber }}</span>
@@ -81,7 +81,7 @@
                         link
                         @click="handleAdjustSchedule(schedule)"
                         title="调班"
-                        :disabled="schedule.status === 'stopped'"
+                        :disabled="schedule.status === -1"
                       >
                         调班
                       </el-button>
@@ -91,7 +91,7 @@
                         link
                         @click="handleDeleteSchedule(schedule)"
                         title="设置停诊"
-                        :disabled="schedule.status === 'stopped'"
+                        :disabled="schedule.status === -1"
                       >
                         停诊
                       </el-button>
@@ -111,6 +111,27 @@
             <el-form :model="batchStopForm" ref="batchStopFormRef" label-width="120px" :rules="batchStopRules">
               <el-row :gutter="20">
                 <el-col :span="24">
+                  <el-form-item label="选择科室" prop="department" required>
+                    <el-select
+                      v-model="batchStopForm.department"
+                      placeholder="请选择科室"
+                      filterable
+                      style="width: 100%"
+                      @change="handleDepartmentChange"
+                    >
+                      <el-option
+                        v-for="dept in departments"
+                        :key="dept.id"
+                        :label="dept.name"
+                        :value="dept.name"
+                      >
+                      </el-option>
+                    </el-select>
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="20">
+                <el-col :span="24">
                   <el-form-item label="选择医生" prop="doctorIds" required>
                     <el-select
                       v-model="batchStopForm.doctorIds"
@@ -118,6 +139,7 @@
                       placeholder="请选择需要停诊的医生"
                       filterable
                       style="width: 100%"
+                      :disabled="!batchStopForm.department"
                     >
                       <el-option
                         v-for="doc in doctorOptions"
@@ -224,6 +246,29 @@
       <el-tab-pane label="新增排班" name="add">
         <h2>批量新增排班</h2>
         <el-form :model="addScheduleForm" ref="addFormRef" label-width="120px">
+          <el-form-item label="选择科室" prop="department" required>
+            <el-select
+              v-model="addScheduleForm.department"
+              placeholder="请选择科室"
+              filterable
+              style="width: 100%"
+              @change="(value) => {
+                // 清空已添加的所有排班
+                Object.keys(addScheduleForm.schedules).forEach(key => {
+                  addScheduleForm.schedules[key] = []
+                })
+                fetchDoctorsByDepartment(value)
+              }"
+            >
+              <el-option
+                v-for="dept in departments"
+                :key="dept.id"
+                :label="dept.name"
+                :value="dept.name"
+              >
+              </el-option>
+            </el-select>
+          </el-form-item>
           <el-form-item label="选择周次" prop="week" required>
             <el-radio-group v-model="addScheduleForm.week">
               <el-radio :value="0">当前周</el-radio>
@@ -252,7 +297,7 @@
                 <div v-for="(schedule, index) in addScheduleForm.schedules[day.key]" :key="index" class="schedule-item">
                   <el-row :gutter="10" align="middle">
                     <el-col :span="10">
-                      <el-select v-model="schedule.doctor_name" placeholder="选择医生" filterable style="width: 100%">
+                      <el-select v-model="schedule.doctor_name" placeholder="选择医生" filterable style="width: 100%" :disabled="!addScheduleForm.department">
                         <el-option
                           v-for="doc in doctorOptions"
                           :key="doc.userid"
@@ -289,6 +334,26 @@
         <h2>批量延后排班</h2>
         <el-card class="box-card" shadow="never" style="max-width: 800px;">
           <el-form :model="batchDelayForm" :rules="batchDelayRules" ref="batchDelayFormRef" label-width="120px">
+            <el-form-item label="选择科室" prop="department" required>
+              <el-select
+                v-model="batchDelayForm.department"
+                placeholder="请选择科室"
+                filterable
+                style="width: 100%"
+                @change="(value) => {
+                  batchDelayForm.doctorIds = []
+                  fetchDoctorsByDepartment(value)
+                }"
+              >
+                <el-option
+                  v-for="dept in departments"
+                  :key="dept.id"
+                  :label="dept.name"
+                  :value="dept.name"
+                >
+                </el-option>
+              </el-select>
+            </el-form-item>
             <el-form-item label="选择医生" prop="doctorIds" required>
               <el-select
                 v-model="batchDelayForm.doctorIds"
@@ -296,6 +361,7 @@
                 placeholder="请选择需要延后排班的医生"
                 filterable
                 style="width: 100%"
+                :disabled="!batchDelayForm.department"
               >
                 <el-option
                   v-for="doc in doctorOptions"
@@ -611,7 +677,7 @@ import { ElMessage,ElMessageBox } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 // 导入你的 API 函数
 // @ts-ignore
-import { getSchedulesHistory, getSchedules, createNextWeekSchedule, deleteSchedule, stopBatchSchedule, batchDelaySchedule, getShiftRequests, handleShiftRequest, submitScheduleChangeRequest, getDoctorOptions, requestScheduleAdjustment } from './api/scheduleApi.js'
+import { getSchedulesHistory, getSchedules, createNextWeekSchedule, deleteSchedule, stopBatchSchedule, batchDelaySchedule, getShiftRequests, handleShiftRequest, submitScheduleChangeRequest, getDoctorOptions, getDoctorsByDepartment, requestScheduleAdjustment } from './api/scheduleApi.js'
 // import { getDoctorSchedule, addSchedule } from './api/scheduleApi.js'
 // import { getDepartmentOptions } from '@/views/DoctorQuery/api/doctorApi.js'
 // import { getDoctorListWithFilter } from '@/views/DoctorQuery/api/doctorApi.js'
@@ -646,7 +712,7 @@ interface ScheduleDetail {
   roomNumber: string;
   remainingQuota: number;
   templateId?: string; // 添加 template_id 字段，用于调班等操作
-  status: 'normal' | 'stopped'; // 排班状态：normal-正常，stopped-停诊
+  status: number; // 排班状态：0-还没开始, 1-进行中, 2-已结束, -1-停诊
 }
 
 
@@ -738,6 +804,7 @@ const timeSlotMap: Record<string, string> = {
 // --- 新增功能状态 ---
 const addFormRef = ref<FormInstance>()
 const addScheduleForm = reactive({
+  department: '', // 新增科室选择
   week: 1, // 0=当前周，1=下一周
   schedules: {
     mon: [] as Array<{doctor_name: string, template_id: string}>,
@@ -831,6 +898,7 @@ const availableTimeSlots = computed(() => {
 const batchDelayFormRef = ref<FormInstance>()
 const batchDelayLoading = ref(false)
 const batchDelayForm = reactive({
+  department: '',             // 新增科室选择
   doctorIds: [] as string[],  // 医生ID数组
   delayDays: 1,               // 延后天数
   startDate: '',              // 开始日期
@@ -864,6 +932,7 @@ const shiftRequestsQuery = reactive({
 const batchStopFormRef = ref<FormInstance>()
 const batchStopLoading = ref(false)
 const batchStopForm = reactive({
+  department: '', // 新增科室选择
   doctorIds: [] as string[],
   startDate: '',
   startTimeSlot: 'TIME0001',
@@ -874,14 +943,23 @@ const batchStopForm = reactive({
 
 // 批量停诊表单验证规则
 const batchStopRules = {
+  department: [
+    { required: true, message: '请选择科室', trigger: 'change' }
+  ],
   doctorIds: [
     { required: true, message: '请至少选择一位医生', trigger: 'change', type: 'array', min: 1 }
   ],
   startDate: [
     { required: true, message: '请选择开始日期', trigger: 'change' }
   ],
+  startTimeSlot: [
+    { required: true, message: '请选择开始时段', trigger: 'change' }
+  ],
   endDate: [
     { required: true, message: '请选择结束日期', trigger: 'change' }
+  ],
+  endTimeSlot: [
+    { required: true, message: '请选择结束时段', trigger: 'change' }
   ],
   reason: [
     { required: true, message: '请输入停诊原因', trigger: 'blur' },
@@ -891,6 +969,9 @@ const batchStopRules = {
 
 // 批量延后排班表单验证规则
 const batchDelayRules = {
+  department: [
+    { required: true, message: '请选择科室', trigger: 'change' }
+  ],
   doctorIds: [
     { required: true, message: '请至少选择一位医生', trigger: 'change', type: 'array', min: 1 }
   ],
@@ -919,20 +1000,6 @@ const batchDelayRules = {
 
 
 // --- 生命周期函数 ---
-// 定义定时器变量
-let doctorRefreshTimer = null
-
-// 获取医生选项数据
-const fetchDoctorOptions = async () => {
-  try {
-    const response = await getDoctorOptions()
-    doctorOptions.value = response.data.options || []
-  } catch (error) {
-    console.error('获取医生选项失败:', error)
-    ElMessage.error('获取医生选项失败')
-  }
-}
-
 onMounted(() => {
   // 设置科室数据
   departments.value = [
@@ -960,62 +1027,40 @@ onMounted(() => {
     { id: 'DEP022', name: '眼科门诊' },
   ]
   
-  // 初始加载所有医生
-  fetchAllDoctors()
-  // 获取医生选项
-  fetchDoctorOptions()
-  
-  // 设置心跳刷新机制，每隔5分钟更新一次医生列表
-  doctorRefreshTimer = setInterval(fetchAllDoctors, 300000)
+  // 初始加载科室数据
+  // 现在不再直接加载所有医生，而是根据科室选择动态加载
   
   adjustmentRequests.value = getMockAdjustmentRequests()
 })
 
-// 组件卸载时清除定时器
-onBeforeUnmount(() => {
-  if (doctorRefreshTimer) {
-    clearInterval(doctorRefreshTimer)
-    doctorRefreshTimer = null
-  }
-})
-
 // --- 方法 ---
-// 获取所有医生的函数（不是分页数据）
-const fetchAllDoctors = async () => {
+// 根据科室获取医生列表
+const fetchDoctorsByDepartment = async (departmentName: string) => {
+  if (!departmentName) {
+    doctorOptions.value = []
+    return
+  }
+  
   try {
-    console.log('开始获取医生列表...')
-    const response = await getDoctorOptions()
+    // 调用API根据科室获取医生信息
+    const response = await getDoctorsByDepartment(departmentName)
     
-    console.log('获取医生列表响应:', response)
-    console.log(response.data.options)
-    // 处理响应格式：response.data.data.options数组
-    let doctors = []
-    if (response.data && response.data.options && Array.isArray(response.data.options)) {
-      doctors = response.data.options
-      console.log("转换后的医生数据:", doctors)
-      if (doctors.length > 0) {
-        // 将API返回的医生数据转换为前端需要的格式
-        doctorOptions.value = doctors.map(doc => ({
-          userid: doc.userid, // 生成唯一ID
-          username: doc.username, // 医生名字
-          department: doc.department || '未指定科室' // 使用科室名称代替专长
-        }))
-        
-        console.log(`成功加载 ${doctorOptions.value.length} 名医生`)
-      } else {
-        console.warn('未获取到医生数据，使用默认模拟数据')
-          // 如果API没有返回数据，使用默认模拟数据
-          doctorOptions.value = [
-            { userid: 'DOC0004', username: '王崇慧', department: '泌尿外科' },
-            { userid: 'DOC0006', username: '刘炳岩', department: '泌尿外科' },
-            { userid: 'DOC0007', username: '严肃', department: '泌尿外科' },
-            { userid: 'DOC0008', username: '乔逸', department: '泌尿外科' },
-            { userid: '6', username: '朱燕林', department: '妇产科' }
-          ]
-      }
+    // 检查响应数据格式
+    if (response && response.data && Array.isArray(response.data)) {
+      // 过滤出有用户ID的医生数据
+      const filteredDoctors = response.data.filter((doc: any) => doc.userid)
+      console.log('根据科室获取的医生数据:', response.data) 
+      // 转换为前端需要的格式
+      doctorOptions.value = filteredDoctors.map((doc: any) => ({
+        userid: doc.userid, // 医生ID
+        username: doc.username, // 医生名字
+        department: doc.department || '未指定科室' // 使用科室名称代替专长
+      }))
+      
+      console.log(`成功加载 ${doctorOptions.value.length} 名医生`)
     } else {
-      console.error('响应格式不符合要求:', response)
-      // 如果响应格式不正确，使用默认模拟数据
+      console.warn('未获取到医生数据，使用默认模拟数据')
+        // 如果API没有返回数据，使用默认模拟数据
         doctorOptions.value = [
           { userid: 'DOC0004', username: '王崇慧', department: '泌尿外科' },
           { userid: 'DOC0006', username: '刘炳岩', department: '泌尿外科' },
@@ -1029,6 +1074,17 @@ const fetchAllDoctors = async () => {
     // 如果API请求异常，保持当前医生数据不变
   }
 }
+
+// 科室变化时获取医生列表
+const handleDepartmentChange = (departmentName: string) => {
+  console.log('选择的科室:', departmentName)
+  // 清空已选择的医生
+  batchStopForm.doctorIds = []
+  // 获取该科室的医生列表
+  fetchDoctorsByDepartment(departmentName)
+}
+
+
 
 const fetchInitialData = async () => {
   try {
@@ -1134,7 +1190,7 @@ const handleQueryByWeek = async () => {
               roomNumber: '待定',  // 后端没有返回该字段
               remainingQuota: parseInt(schedule.left_source_count) || 0,  // 后端返回的是 left_source_count
               templateId: schedule.template_id || '',  // 后端返回的是 template_id
-              status: schedule.status === 'stopped' ? 'stopped' : 'normal'  // 设置状态
+              status: schedule.status // 直接使用后端返回的整数状态
             })
           })
         }
@@ -1201,7 +1257,7 @@ const handleQuery = async () => {
               roomNumber: schedule.room_number || '待定', // 如果没有诊室信息
               remainingQuota: parseInt(schedule.left_source_count) || 0,
               templateId: schedule.template_id || '',  // 保存 template_id
-              status: schedule.status === 'stopped' ? 'stopped' : 'normal'  // 设置状态
+              status: schedule.status // 直接使用后端返回的整数状态
             })
           })
         }
@@ -1323,6 +1379,7 @@ const handleAddSchedule = async () => {
 }
 
 const resetAddForm = () => {
+  addScheduleForm.department = ''
   addScheduleForm.week = 1
   addScheduleForm.schedules = {
     mon: [],
@@ -1333,6 +1390,8 @@ const resetAddForm = () => {
     sat: [],
     sun: []
   }
+  // 清空医生选项
+  doctorOptions.value = []
 }
 // --- 批量延后排班相关方法 ---
 const handleBatchDelaySubmit = async () => {
@@ -1634,10 +1693,11 @@ const handleDeleteSchedule = async (schedule: ScheduleDetail) => {
 
     ElMessage.success('设置停诊成功！')
 
-    // 更新本地排班状态为停诊，而不是删除
-    const targetSchedule = scheduleDetails.value.find(s => s.id === schedule.id)
-    if (targetSchedule) {
-      targetSchedule.status = 'stopped'
+    // 重新加载排班数据，确保显示最新的停诊状态
+    if (queryForm.week) {
+      await handleQueryByWeek()
+    } else if (queryForm.selectedDate) {
+      await handleQuery()
     }
 
   } catch (error) {

@@ -269,3 +269,12 @@ export const handleShiftRequest = (id, action) => {
 export const getDoctorOptions = () => {
   return api.get('/admin/getDoctorOptions')
 }
+
+/**
+ * @description 根据科室名称获取该科室所有的医生
+ * @param {string} departName - 科室名称
+ * @returns {Promise<Array<{userid: string, username: string, department: string}>>} 该科室的医生列表
+ */
+export const getDoctorsByDepartment = (departName) => {
+  return api.get('/admin/getDoctorsByDepartment', { departName })
+}

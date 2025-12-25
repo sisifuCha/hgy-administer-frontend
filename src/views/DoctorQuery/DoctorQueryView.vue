@@ -113,26 +113,32 @@ const loadDepartmentOptions = async () => {
 
 // 加载职称选项
 const loadTitleOptions = async () => {
-  try {
-    const titleData = await getTitleOptions()
-    // 根据API响应格式调整，获取正确的数据结构
-    docTitleOptions.value = titleData?.data || titleData || [
+  // try {
+  //   const titleData = await getTitleOptions()
+  //   // 根据API响应格式调整，获取正确的数据结构
+  //   docTitleOptions.value = titleData?.data || titleData || [
+  //     { value: 'TITLE001', label: '主任医师' },
+  //     { value: 'TITLE002', label: '副主任医师' },
+  //     { value: 'TITLE003', label: '主治医师' },
+  //     { value: 'TITLE004', label: '住院医师' }
+  //   ]
+  // } catch (error) {
+  //   // console.error('获取职称选项失败', error)
+  //   // ElMessage.error('获取职称选项失败')
+  //   // 使用默认职称数据
+  //   docTitleOptions.value = [
+  //     { value: 'TITLE001', label: '主任医师' },
+  //     { value: 'TITLE002', label: '副主任医师' },
+  //     { value: 'TITLE003', label: '主治医师' },
+  //     { value: 'TITLE004', label: '住院医师' }
+  //   ]
+  // }
+      docTitleOptions.value = [
       { value: 'TITLE001', label: '主任医师' },
       { value: 'TITLE002', label: '副主任医师' },
       { value: 'TITLE003', label: '主治医师' },
       { value: 'TITLE004', label: '住院医师' }
     ]
-  } catch (error) {
-    console.error('获取职称选项失败', error)
-    ElMessage.error('获取职称选项失败')
-    // 使用默认职称数据
-    docTitleOptions.value = [
-      { value: 'TITLE001', label: '主任医师' },
-      { value: 'TITLE002', label: '副主任医师' },
-      { value: 'TITLE003', label: '主治医师' },
-      { value: 'TITLE004', label: '住院医师' }
-    ]
-  }
 }
 
 // 查询医生列表
@@ -147,13 +153,51 @@ const queryDoctors = async () => {
       num: pageSize.value
     }
 
+    console.log('查询医生列表请求参数:', requestBody)
     const response = await getDoctors(requestBody)
     console.log('查询医生列表响应:', response)
     if (response.code === 200) {
       console.log('查询医生列表成功:', response.data)
-      doctorList.value = response.data?.doctorList || []
-      // 从API响应中获取真实的总条数，如果没有则使用当前列表长度
-      total.value = response.data?.total || doctorList.value.length
+      // 检查响应数据结构，尝试多种可能的字段名
+      const data = response.data || {}
+      const listData = data?.doctorList || data?.records || []
+      doctorList.value = listData
+      
+      // 检查响应数据结构
+      console.log('响应数据结构:', {
+        hasDoctorList: data?.doctorList !== undefined,
+        hasRecords: data?.records !== undefined,
+        listLength: listData.length,
+        hasTotal: data?.total !== undefined,
+        hasTotalItems: data?.totalItems !== undefined,
+        totalValue: data?.total,
+        totalItemsValue: data?.totalItems
+      })
+      
+      // 从API响应中获取真实的总条数，尝试多种可能的字段名
+      total.value = data?.total || data?.totalItems || data?.count || data?.totalRecords || listData.length
+      
+      // 如果没有总条数信息且当前页有数据，使用当前页+1的计算方式
+      if (total.value === listData.length && listData.length > 0) {
+        // 如果当前页的数据量等于请求的每页数量，说明可能还有下一页
+        if (listData.length >= pageSize.value) {
+          // 临时设置一个较大的总条数，确保分页组件显示
+          total.value = (currentPage.value + 1) * pageSize.value
+        } else {
+          // 当前页是最后一页
+          total.value = (currentPage.value - 1) * pageSize.value + listData.length
+        }
+        console.log('计算得出的总条数:', total.value)
+      }
+      
+      // 如果当前页没有数据但总条数大于0，说明当前页超过了实际页数
+      if (listData.length === 0 && total.value > 0) {
+        // 重置到最后一页
+        currentPage.value = Math.max(1, Math.ceil(total.value / pageSize.value))
+        // 重新查询
+        await queryDoctors()
+        return
+      }
     } else {
       ElMessage.error(response.message || '查询医生列表失败')
       doctorList.value = []
@@ -355,7 +399,7 @@ const getStatusType = (status: string) => {
     </el-table>
 
     <!-- 分页组件 -->
-    <div class="pagination-container" v-if="total > 0">
+    <div class="pagination-container" v-if="doctorList.length > 0 || total > 0">
       <el-pagination
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"
